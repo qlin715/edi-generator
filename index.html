@@ -1,0 +1,3457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDI Generator — Amazon, Walmart &amp; Costco</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ── */
+    :root {
+      --accent:        #FF9900;
+      --accent-dark:   #e07f00;
+      --accent-darker: #c46f00;
+      --accent-rgb:    255, 153, 0;
+
+      --navy:     #0f1b2d;
+      --navy-mid: #162235;
+
+      --bg:       #F1F5F9;
+      --surface:  #ffffff;
+      --border:   #E2E8F0;
+      --border-strong: #CBD5E1;
+
+      --text:      #0F172A;
+      --text-muted:#64748B;
+      --text-faint:#94A3B8;
+
+      --radius-sm: 6px;
+      --radius:    10px;
+      --radius-lg: 12px;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    /* ── Base ── */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       HEADER
+       ════════════════════════════════════════════════════════════ */
+    .site-header {
+      background: var(--navy);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.22);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .header-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .header-logo {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    .header-brand-text h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    .header-brand-text p {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 0.05rem;
+    }
+
+    /* Retailer toggle — lives in the header */
+    .retailer-toggle {
+      display: flex;
+      gap: 6px;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .retailer-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 110px;
+      padding: 0.5rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      opacity: 0.6;
+      transition: opacity 0.18s, box-shadow 0.18s, transform 0.15s;
+      font-family: 'Inter', inherit;
+    }
+
+    .retailer-btn .r-dot { display: none; }
+
+    #btnAmazon  { background: #FF9900; }
+    #btnWalmart { background: #0071CE; }
+    #btnCostco  { background: #E31837; }
+
+    .retailer-btn.active {
+      opacity: 1;
+      border-bottom-color: rgba(0,0,0,0.25);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .retailer-btn:not(.active):hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* ════════════════════════════════════════════════════════════
+       LAYOUT
+       ════════════════════════════════════════════════════════════ */
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.75rem 1.25rem 3rem;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       CARDS
+       ════════════════════════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+      animation: cardSlideUp 280ms ease both;
+    }
+
+    .card h2 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid #F1F5F9;
+    }
+
+    /* ── Two-column card pair (Ship From / Ship To) ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .two-col > .card { margin-bottom: 0; }
+
+    /* ════════════════════════════════════════════════════════════
+       GRIDS & FIELDS
+       ════════════════════════════════════════════════════════════ */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 0; }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-faint);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+      padding: 10px 14px;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Inter', inherit;
+      font-weight: 400;
+      width: 100%;
+      background: #fff;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+    }
+
+    /* Restore date/number appearance on WebKit */
+    input[type="date"] { -webkit-appearance: auto; appearance: auto; }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+    }
+
+    input::placeholder { color: #CBD5E1; }
+
+    /* ── Address grid ── */
+    .addr-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .addr-grid .f-name,
+    .addr-grid .f-addr { grid-column: 1 / -1; }
+
+    /* ════════════════════════════════════════════════════════════
+       TABS — pill style
+       ════════════════════════════════════════════════════════════ */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      border-bottom: none;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      padding: 8px 24px;
+      border: none;
+      background: #E2E8F0;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: none;
+      margin-bottom: 0;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+      font-family: 'Inter', inherit;
+    }
+
+    .tab-btn:hover { background: #CBD5E1; color: var(--text); }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      border-bottom-color: transparent;
+      box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.35);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active {
+      display: block;
+      animation: tabFadeIn 200ms ease both;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       TABLES
+       ════════════════════════════════════════════════════════════ */
+    .table-wrap { overflow-x: auto; margin: 0 -4px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: #F8FAFC;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1.5px solid #E2E8F0;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+
+    tbody tr:nth-child(even) td { background: #F8FAFC; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #F0F9FF !important; }
+
+    tbody td input {
+      width: 100%;
+      padding: 5px 8px;
+      border: none;
+      border-bottom: 1.5px solid transparent;
+      border-radius: 0;
+      font-size: 13px;
+      background: transparent;
+      font-family: 'Inter', inherit;
+      font-weight: 400;
+      color: var(--text);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    tbody td input:focus {
+      outline: none;
+      border-bottom-color: var(--accent);
+      background: transparent;
+      box-shadow: none;
+    }
+
+    tbody td input::placeholder { color: #CBD5E1; }
+
+    td.line-num { text-align: center; color: var(--text-faint); font-size: 12px; width: 2rem; }
+    .col-upc   { min-width: 130px; }
+    .col-desc  { min-width: 180px; }
+    .col-qty   { width: 78px; }
+    .col-price { width: 108px; }
+    .col-remove { width: 38px; text-align: center; }
+
+    /* ── Line items empty state ── */
+    .line-empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      gap: 10px;
+      color: var(--text-faint);
+    }
+
+    .line-empty-state .empty-icon { font-size: 28px; line-height: 1; }
+    .line-empty-state .empty-text { font-size: 13px; font-weight: 500; }
+
+    .table-wrap:has(tbody:empty) + .line-empty-state { display: flex; }
+
+    /* ════════════════════════════════════════════════════════════
+       BUTTONS
+       ════════════════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Inter', inherit;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      padding: 8px 16px;
+    }
+
+    .btn-secondary:hover { background: rgba(var(--accent-rgb), 0.08); }
+
+    /* Generate button — full width, accent colored */
+    .btn-primary {
+      width: 100%;
+      justify-content: center;
+      background: var(--accent);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      height: 48px;
+      padding: 0 1.5rem;
+      border: none;
+      border-radius: 10px;
+      letter-spacing: 0.01em;
+      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.45);
+    }
+
+    .btn-primary:active { transform: scale(0.98); background: var(--accent-darker); }
+
+    .btn-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #FEE2E2;
+      border: none;
+      cursor: pointer;
+      color: #EF4444;
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+
+    tr:hover .btn-remove,
+    .carton-header .btn-remove { opacity: 1; }
+    .btn-remove:hover { background: #EF4444; color: #fff; }
+
+    .btn-copy {
+      background: #F1F5F9;
+      color: var(--text-muted);
+      border: 1.5px solid #E2E8F0;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 8px;
+    }
+
+    .btn-copy:hover { background: #E2E8F0; color: var(--text); }
+
+    .table-footer {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .total-display {
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .total-display span {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .actions { margin-top: 4px; }
+
+    /* ════════════════════════════════════════════════════════════
+       CARTON BLOCKS
+       ════════════════════════════════════════════════════════════ */
+    .carton-block {
+      border: 1.5px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px 18px 14px;
+      margin-bottom: 12px;
+      background: #F8FAFC;
+      transition: border-color 0.15s;
+    }
+
+    .carton-block:hover { border-color: #CBD5E1; }
+
+    .carton-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .carton-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .carton-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .carton-items-section {
+      border-top: 1.5px solid #E2E8F0;
+      padding-top: 12px;
+    }
+
+    .sub-heading {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      margin-bottom: 8px;
+    }
+
+    .carton-items-section thead th { background: #EEF2F7; }
+
+    /* ════════════════════════════════════════════════════════════
+       PREVIEW
+       ════════════════════════════════════════════════════════════ */
+    #previewCard { display: none; }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .preview-header h2 { margin: 0; }
+
+    pre#ediPreview {
+      background: #0F172A;
+      color: #94A3B8;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      padding: 20px;
+      border-radius: 10px;
+      overflow-x: auto;
+      white-space: pre;
+      max-height: 360px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       TOAST NOTIFICATION
+       ════════════════════════════════════════════════════════════ */
+    .success-banner {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 320px;
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      background: #fff;
+      border-left: 4px solid #1A7A4A;
+      color: #065f46;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .success-banner.visible {
+      display: flex;
+      animation: toastSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both,
+                 toastSlideOut 0.3s ease 3.7s both;
+    }
+
+    .toast-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #94A3B8;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0 0 0 4px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+      font-family: inherit;
+    }
+
+    .toast-close:hover { color: #475569; }
+
+    /* ════════════════════════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════════════════════════ */
+    @media (max-width: 680px) {
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.85rem;
+        padding: 1rem 1.25rem;
+      }
+
+      .retailer-toggle { width: 100%; }
+      .retailer-btn    { flex: 1; }
+
+      .two-col   { grid-template-columns: 1fr; }
+      .grid      { grid-template-columns: 1fr 1fr; }
+      .addr-grid { grid-template-columns: 1fr 1fr; }
+      .addr-grid .f-city { grid-column: 1 / -1; }
+
+      .container { padding: 1.25rem 1rem 2.5rem; }
+
+      .success-banner { width: calc(100vw - 32px); right: 16px; bottom: 16px; }
+    }
+
+    @media (max-width: 440px) {
+      .grid         { grid-template-columns: 1fr; }
+      .carton-fields{ grid-template-columns: 1fr 1fr; }
+      .addr-grid    { grid-template-columns: 1fr; }
+      .addr-grid .f-city { grid-column: 1; }
+      .tab-btn      { padding: 7px 16px; font-size: 12px; }
+    }
+    /* ════════════════════════════════════════════════════════════
+       850 UPLOAD BAR
+       ════════════════════════════════════════════════════════════ */
+    .upload-bar {
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .upload-row {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-upload {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 200px;
+      padding: 14px 20px;
+      background: #F8FAFC;
+      border: 2px dashed #CBD5E1;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      font-family: 'Inter', inherit;
+    }
+
+    .btn-upload:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(var(--accent-rgb), 0.04);
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--text-faint);
+      align-self: center;
+    }
+
+    .po-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .po-banner.success {
+      background: #F0FDF4;
+      border-left: 4px solid #22C55E;
+      color: #15803D;
+    }
+
+    .po-banner.error {
+      background: #FFF1F2;
+      border-left: 4px solid #F43F5E;
+      color: #BE123C;
+    }
+
+    .po-banner.visible { display: flex; }
+    .po-banner.loading {
+      background: #F8FAFC;
+      border-left: 4px solid #94A3B8;
+      color: #475569;
+      display: flex;
+    }
+
+    /* ── Loading spinner ── */
+    @keyframes edi-spin { to { transform: rotate(360deg); } }
+    .edi-spinner {
+      width: 13px; height: 13px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      display: inline-block;
+      animation: edi-spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       STEP INDICATOR
+       ════════════════════════════════════════════════════════════ */
+    .step-bar {
+      display: flex;
+      align-items: flex-start;
+      background: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      cursor: default;
+      min-width: 80px;
+    }
+
+    .step-item.step-clickable { cursor: pointer; }
+
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #E2E8F0;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      transition: background 0.25s, color 0.25s, transform 0.15s, box-shadow 0.2s;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .step-item.step-active .step-circle {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.4);
+    }
+    .step-item.step-complete .step-circle {
+      background: #1A7A4A;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(26,122,74,0.28);
+    }
+    .step-item.step-clickable:hover .step-circle { transform: scale(1.1); }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-faint);
+      white-space: nowrap;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .step-item.step-active   .step-label { color: var(--accent); }
+    .step-item.step-complete .step-label { color: #1A7A4A; }
+
+    .step-connector {
+      flex: 1;
+      height: 2px;
+      background: #E2E8F0;
+      border-radius: 2px;
+      margin-top: 17px;
+      min-width: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .step-connector::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 0;
+      background: #1A7A4A;
+      transition: width 0.5s ease;
+    }
+
+    .step-connector.step-line-filled::after { width: 100%; }
+
+    .step-tooltip {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1E293B;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 50;
+    }
+
+    .step-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-top-color: #1E293B;
+    }
+
+    .step-item.step-locked:hover .step-tooltip { opacity: 1; }
+
+    .btn-new-shipment {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 14px;
+      background: none;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: 'Inter', inherit;
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      margin-left: auto;
+      align-self: center;
+      flex-shrink: 0;
+    }
+
+    .btn-new-shipment:hover {
+      border-color: #F43F5E;
+      color: #F43F5E;
+      background: #FFF1F2;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       ANIMATIONS
+       ════════════════════════════════════════════════════════════ */
+    @keyframes cardSlideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes toastSlideIn {
+      from { transform: translateX(360px); opacity: 0; }
+      to   { transform: translateX(0);     opacity: 1; }
+    }
+
+    @keyframes toastSlideOut {
+      from { transform: translateX(0);     opacity: 1; }
+      to   { transform: translateX(360px); opacity: 0; }
+    }
+
+    @keyframes sectionFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .retailer-entering { animation: sectionFadeIn 150ms ease both; }
+
+    /* Card stagger inside active tab panels */
+    .tab-panel.active > .upload-bar   { animation: cardSlideUp 280ms ease both; animation-delay:   0ms; }
+    .tab-panel.active > .card:nth-of-type(1) { animation-delay:  40ms; }
+    .tab-panel.active > .card:nth-of-type(2) { animation-delay:  80ms; }
+    .tab-panel.active > .card:nth-of-type(3) { animation-delay: 120ms; }
+    .tab-panel.active > .card:nth-of-type(4) { animation-delay: 160ms; }
+    .tab-panel.active > .two-col            { animation: cardSlideUp 280ms 120ms ease both; }
+    .tab-panel.active > .actions            { animation: cardSlideUp 280ms 200ms ease both; }
+
+    @media (max-width: 580px) {
+      .step-label { display: none; }
+      .step-item  { min-width: 40px; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+  <!-- ── Full-width sticky header ───────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="header-logo">EDI</div>
+        <div class="header-brand-text">
+          <h1>EDI Generator</h1>
+          <p>Amazon, Walmart &amp; Costco · X12 005010</p>
+        </div>
+      </div>
+      <div class="retailer-toggle">
+        <button id="btnAmazon"  class="retailer-btn active" onclick="selectRetailer('amazon')">
+          <span class="r-dot"></span>Amazon
+        </button>
+        <button id="btnWalmart" class="retailer-btn"        onclick="selectRetailer('walmart')">
+          <span class="r-dot"></span>Walmart
+        </button>
+        <button id="btnCostco"  class="retailer-btn"        onclick="selectRetailer('costco')">
+          <span class="r-dot"></span>Costco
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main content ───────────────────────────────────────────────── -->
+  <div class="container">
+
+    <div id="successBanner" class="success-banner">
+      <span>&#10003;</span>
+      <span>EDI file generated and downloaded.</span>
+      <button class="toast-close" onclick="this.closest('.success-banner').classList.remove('visible')" title="Dismiss">&times;</button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         AMAZON SECTION
+         ════════════════════════════════════════════════════════════════ -->
+    <div id="amazonSection" class="retailer-section">
+
+      <div class="card">
+        <h2>Amazon EDI Configuration</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="senderId">Sender ISA ID</label>
+            <input type="text" id="senderId" value="YOURSENDERID" maxlength="15">
+            <span class="hint">Max 15 chars — your ISA sender ID</span>
+          </div>
+          <div class="field">
+            <label for="senderName">Your Company Name</label>
+            <input type="text" id="senderName" value="YOUR COMPANY NAME">
+          </div>
+          <div class="field">
+            <label for="vendorCode">Amazon Vendor Code</label>
+            <input type="text" id="vendorCode" value="VENDCODE">
+            <span class="hint">Amazon-assigned vendor code</span>
+          </div>
+          <div class="field">
+            <label for="isaEnv">Environment</label>
+            <select id="isaEnv">
+              <option value="P">Production (P)</option>
+              <option value="T" selected>Test (T)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-bar" id="amazonStepBar">
+        <div class="step-item" id="amazonStep1" onclick="handleStepClick('amazon',1)">
+          <div class="step-circle" id="amazonCircle1">1</div>
+          <div class="step-label">Upload PO</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="amazonLine1"></div>
+        <div class="step-item" id="amazonStep2" onclick="handleStepClick('amazon',2)">
+          <div class="step-circle" id="amazonCircle2">2</div>
+          <div class="step-label">Ship Notice (856)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="amazonLine2"></div>
+        <div class="step-item" id="amazonStep3" onclick="handleStepClick('amazon',3)">
+          <div class="step-circle" id="amazonCircle3">3</div>
+          <div class="step-label">Invoice (810)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <button class="btn-new-shipment" onclick="resetShipment('amazon')">&#8635;&ensp;New Shipment</button>
+      </div>
+
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab(this,'tab810')">810 Invoice</button>
+        <button class="tab-btn"        onclick="switchTab(this,'tab856')">856 Ship Notice</button>
+      </div>
+
+      <!-- Amazon 810 -->
+      <div id="tab810" class="tab-panel active">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="amazonUploadInput">
+              &#8593;&ensp;Upload 850 PO File
+            </label>
+            <input type="file" id="amazonUploadInput" accept=".edi,.txt"
+                   style="display:none;" onchange="handle850Upload(this,'amazon')">
+            <label class="btn-upload" for="amazonPdfInput">
+              &#128196;&ensp;Upload Supplier Invoice PDF
+            </label>
+            <input type="file" id="amazonPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handlePdfUpload(this,'amazon')">
+            <span class="upload-hint">Upload a PO file or supplier invoice PDF to pre-fill forms</span>
+          </div>
+          <div id="amazonPoBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Invoice Details</h2>
+          <div class="grid">
+            <div class="field"><label for="invoiceNum">Invoice Number</label><input type="text" id="invoiceNum" placeholder="INV-001"></div>
+            <div class="field"><label for="invoiceDate">Invoice Date</label><input type="date" id="invoiceDate"></div>
+            <div class="field"><label for="poNumber">PO Number</label><input type="text" id="poNumber" placeholder="1234567890"></div>
+            <div class="field"><label for="shipDate">Ship Date</label><input type="date" id="shipDate"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Line Items</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th class="col-upc">Item UPC</th><th class="col-desc">Description</th>
+                <th class="col-qty">Qty</th><th class="col-price">Unit Price ($)</th><th class="col-remove"></th>
+              </tr></thead>
+              <tbody id="lineItemsBody"></tbody>
+            </table>
+          </div>
+          <div class="line-empty-state">
+            <span class="empty-icon">📦</span>
+            <span class="empty-text">No items yet — add a line item to get started</span>
+          </div>
+          <div class="table-footer">
+            <button class="btn btn-secondary" onclick="addLineItem('lineItemsBody','totalDisplay')">+ Add Line Item</button>
+            <div class="total-display">Total: <span id="totalDisplay">$0.00</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('amazon','810')">&#8659;&ensp;Generate 810 EDI</button>
+        </div>
+      </div>
+
+      <!-- Amazon 856 -->
+      <div id="tab856" class="tab-panel">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="amazonAsnPdfInput">
+              &#128196;&ensp;Upload Ship Notice PDF
+            </label>
+            <input type="file" id="amazonAsnPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handleShipNoticePdfUpload(this,'amazon')">
+            <span class="upload-hint">Parses a ship notice PDF and pre-fills this form</span>
+          </div>
+          <div id="asnPdfBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Shipment Details</h2>
+          <div class="grid">
+            <div class="field"><label for="asnShipmentId">Shipment ID</label><input type="text" id="asnShipmentId" placeholder="SHIP-001"></div>
+            <div class="field"><label for="asnShipDate">Ship Date</label><input type="date" id="asnShipDate"></div>
+            <div class="field"><label for="asnDelivDate">Expected Delivery Date</label><input type="date" id="asnDelivDate"></div>
+            <div class="field"><label for="asnScac">Carrier SCAC</label><input type="text" id="asnScac" placeholder="UPSN" maxlength="4"><span class="hint">e.g. UPSN, FDEG, FXFE</span></div>
+            <div class="field"><label for="asnTracking">Carrier PRO / Tracking #</label><input type="text" id="asnTracking" placeholder="1Z999AA10123456784"></div>
+            <div class="field"><label for="asnBol">Bill of Lading #</label><input type="text" id="asnBol" placeholder="BOL-12345"></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>Ship From (Your Warehouse)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="asnSfName">Company Name</label><input type="text" id="asnSfName" placeholder="Acme Warehouse LLC"></div>
+              <div class="field f-addr"><label for="asnSfAddr">Street Address</label><input type="text" id="asnSfAddr" placeholder="123 Warehouse Blvd"></div>
+              <div class="field f-city"><label for="asnSfCity">City</label><input type="text" id="asnSfCity" placeholder="Los Angeles"></div>
+              <div class="field"><label for="asnSfState">State</label><input type="text" id="asnSfState" placeholder="CA" maxlength="2"></div>
+              <div class="field"><label for="asnSfZip">Zip</label><input type="text" id="asnSfZip" placeholder="90001"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Ship To (Amazon DC)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="asnStDcCode">Amazon DC Code</label><input type="text" id="asnStDcCode" placeholder="PHX3"><span class="hint">Amazon-assigned DC identifier</span></div>
+              <div class="field f-addr"><label for="asnStAddr">Street Address</label><input type="text" id="asnStAddr" placeholder="800 N 75th Ave"></div>
+              <div class="field f-city"><label for="asnStCity">City</label><input type="text" id="asnStCity" placeholder="Phoenix"></div>
+              <div class="field"><label for="asnStState">State</label><input type="text" id="asnStState" placeholder="AZ" maxlength="2"></div>
+              <div class="field"><label for="asnStZip">Zip</label><input type="text" id="asnStZip" placeholder="85043"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Order (PO)</h2>
+          <div class="grid">
+            <div class="field"><label for="asnPoNumber">PO Number</label><input type="text" id="asnPoNumber" placeholder="1234567890"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Cartons / Packs</h2>
+          <div id="cartonsContainer"></div>
+          <button class="btn btn-secondary" onclick="addCarton('cartonsContainer')">+ Add Carton</button>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('amazon','856')">&#8659;&ensp;Generate 856 EDI</button>
+        </div>
+      </div>
+
+    </div><!-- /amazonSection -->
+
+
+    <!-- ════════════════════════════════════════════════════════════════
+         WALMART SECTION
+         ════════════════════════════════════════════════════════════════ -->
+    <div id="walmartSection" class="retailer-section" style="display:none;">
+
+      <div class="card">
+        <h2>Walmart EDI Configuration</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="wmVendorNum">Walmart Vendor Number</label>
+            <input type="text" id="wmVendorNum" value="YOURVENDORNUM" maxlength="15">
+            <span class="hint">Used as ISA sender ID &amp; vendor reference</span>
+          </div>
+          <div class="field">
+            <label for="wmSenderName">Your Company Name</label>
+            <input type="text" id="wmSenderName" value="YOUR COMPANY NAME">
+          </div>
+          <div class="field">
+            <label for="wmEnv">Environment</label>
+            <select id="wmEnv">
+              <option value="P">Production (P)</option>
+              <option value="T" selected>Test (T)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-bar" id="walmartStepBar">
+        <div class="step-item" id="walmartStep1" onclick="handleStepClick('walmart',1)">
+          <div class="step-circle" id="walmartCircle1">1</div>
+          <div class="step-label">Upload PO</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="walmartLine1"></div>
+        <div class="step-item" id="walmartStep2" onclick="handleStepClick('walmart',2)">
+          <div class="step-circle" id="walmartCircle2">2</div>
+          <div class="step-label">Ship Notice (856)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="walmartLine2"></div>
+        <div class="step-item" id="walmartStep3" onclick="handleStepClick('walmart',3)">
+          <div class="step-circle" id="walmartCircle3">3</div>
+          <div class="step-label">Invoice (810)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <button class="btn-new-shipment" onclick="resetShipment('walmart')">&#8635;&ensp;New Shipment</button>
+      </div>
+
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab(this,'wmTab810')">810 Invoice</button>
+        <button class="tab-btn"        onclick="switchTab(this,'wmTab856')">856 Ship Notice</button>
+      </div>
+
+      <!-- Walmart 810 -->
+      <div id="wmTab810" class="tab-panel active">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="walmartUploadInput">
+              &#8593;&ensp;Upload 850 PO File
+            </label>
+            <input type="file" id="walmartUploadInput" accept=".edi,.txt"
+                   style="display:none;" onchange="handle850Upload(this,'walmart')">
+            <label class="btn-upload" for="walmartPdfInput">
+              &#128196;&ensp;Upload Supplier Invoice PDF
+            </label>
+            <input type="file" id="walmartPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handlePdfUpload(this,'walmart')">
+            <span class="upload-hint">Upload a PO file or supplier invoice PDF to pre-fill forms</span>
+          </div>
+          <div id="walmartPoBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Invoice Details</h2>
+          <div class="grid">
+            <div class="field"><label for="wmInvoiceNum">Invoice Number</label><input type="text" id="wmInvoiceNum" placeholder="INV-001"></div>
+            <div class="field"><label for="wmInvoiceDate">Invoice Date</label><input type="date" id="wmInvoiceDate"></div>
+            <div class="field"><label for="wmPoNum">PO Number</label><input type="text" id="wmPoNum" placeholder="1234567890"></div>
+            <div class="field"><label for="wmShipDate">Ship Date</label><input type="date" id="wmShipDate"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Walmart Reference Numbers</h2>
+          <div class="grid">
+            <div class="field">
+              <label for="wmDeptNum">Department Number</label>
+              <input type="text" id="wmDeptNum" placeholder="001">
+              <span class="hint">Walmart-assigned dept (REF*DP)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>Your (Vendor) Address</h2>
+            <div class="addr-grid">
+              <div class="field f-addr"><label for="wmVendorStreet">Street Address</label><input type="text" id="wmVendorStreet" placeholder="456 Supplier Rd"></div>
+              <div class="field f-city"><label for="wmVendorCity">City</label><input type="text" id="wmVendorCity" placeholder="Chicago"></div>
+              <div class="field"><label for="wmVendorState">State</label><input type="text" id="wmVendorState" placeholder="IL" maxlength="2"></div>
+              <div class="field"><label for="wmVendorZip">Zip</label><input type="text" id="wmVendorZip" placeholder="60601"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Walmart Buyer Address</h2>
+            <div class="addr-grid">
+              <div class="field f-addr"><label for="wmBuyerStreet">Street Address</label><input type="text" id="wmBuyerStreet" value="702 SW 8TH ST"></div>
+              <div class="field f-city"><label for="wmBuyerCity">City</label><input type="text" id="wmBuyerCity" value="BENTONVILLE"></div>
+              <div class="field"><label for="wmBuyerState">State</label><input type="text" id="wmBuyerState" value="AR" maxlength="2"></div>
+              <div class="field"><label for="wmBuyerZip">Zip</label><input type="text" id="wmBuyerZip" value="72716"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Line Items</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th class="col-upc">Item UPC</th><th class="col-desc">Description</th>
+                <th class="col-qty">Qty</th><th class="col-price">Unit Price ($)</th><th class="col-remove"></th>
+              </tr></thead>
+              <tbody id="wmLineItemsBody"></tbody>
+            </table>
+          </div>
+          <div class="line-empty-state">
+            <span class="empty-icon">📦</span>
+            <span class="empty-text">No items yet — add a line item to get started</span>
+          </div>
+          <div class="table-footer">
+            <button class="btn btn-secondary" onclick="addLineItem('wmLineItemsBody','wmTotalDisplay')">+ Add Line Item</button>
+            <div class="total-display">Total: <span id="wmTotalDisplay">$0.00</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('walmart','810')">&#8659;&ensp;Generate 810 EDI</button>
+        </div>
+      </div><!-- /wmTab810 -->
+
+      <!-- Walmart 856 -->
+      <div id="wmTab856" class="tab-panel">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="walmartAsnPdfInput">
+              &#128196;&ensp;Upload Ship Notice PDF
+            </label>
+            <input type="file" id="walmartAsnPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handleShipNoticePdfUpload(this,'walmart')">
+            <span class="upload-hint">Parses a ship notice PDF and pre-fills this form</span>
+          </div>
+          <div id="wmAsnPdfBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Shipment Details</h2>
+          <div class="grid">
+            <div class="field"><label for="wmAsnShipmentId">Shipment ID</label><input type="text" id="wmAsnShipmentId" placeholder="SHIP-001"></div>
+            <div class="field"><label for="wmAsnShipDate">Ship Date</label><input type="date" id="wmAsnShipDate"></div>
+            <div class="field"><label for="wmAsnDelivDate">Expected Delivery Date</label><input type="date" id="wmAsnDelivDate"></div>
+            <div class="field"><label for="wmAsnScac">Carrier SCAC</label><input type="text" id="wmAsnScac" placeholder="UPSN" maxlength="4"><span class="hint">e.g. UPSN, FDEG, FXFE</span></div>
+            <div class="field"><label for="wmAsnTracking">Carrier PRO / Tracking #</label><input type="text" id="wmAsnTracking" placeholder="1Z999AA10123456784"></div>
+            <div class="field"><label for="wmAsnBol">Bill of Lading #</label><input type="text" id="wmAsnBol" placeholder="BOL-12345"></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>Ship From (Your Warehouse)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="wmAsnSfName">Company Name</label><input type="text" id="wmAsnSfName" placeholder="Acme Warehouse LLC"></div>
+              <div class="field f-addr"><label for="wmAsnSfAddr">Street Address</label><input type="text" id="wmAsnSfAddr" placeholder="123 Warehouse Blvd"></div>
+              <div class="field f-city"><label for="wmAsnSfCity">City</label><input type="text" id="wmAsnSfCity" placeholder="Los Angeles"></div>
+              <div class="field"><label for="wmAsnSfState">State</label><input type="text" id="wmAsnSfState" placeholder="CA" maxlength="2"></div>
+              <div class="field"><label for="wmAsnSfZip">Zip</label><input type="text" id="wmAsnSfZip" placeholder="90001"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Ship To (Walmart DC)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="wmAsnStName">DC Name</label><input type="text" id="wmAsnStName" placeholder="WALMART DC 6097"></div>
+              <div class="field f-name"><label for="wmAsnStDcCode">Walmart DC Code</label><input type="text" id="wmAsnStDcCode" placeholder="6097"><span class="hint">Walmart-assigned DC number</span></div>
+              <div class="field f-addr"><label for="wmAsnStAddr">Street Address</label><input type="text" id="wmAsnStAddr" placeholder="1 Distribution Dr"></div>
+              <div class="field f-city"><label for="wmAsnStCity">City</label><input type="text" id="wmAsnStCity" placeholder="Shelby"></div>
+              <div class="field"><label for="wmAsnStState">State</label><input type="text" id="wmAsnStState" placeholder="NC" maxlength="2"></div>
+              <div class="field"><label for="wmAsnStZip">Zip</label><input type="text" id="wmAsnStZip" placeholder="28150"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Order (PO)</h2>
+          <div class="grid">
+            <div class="field"><label for="wmAsnPoNumber">PO Number</label><input type="text" id="wmAsnPoNumber" placeholder="1234567890"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Cartons / Packs</h2>
+          <div id="wmCartonsContainer"></div>
+          <button class="btn btn-secondary" onclick="addCarton('wmCartonsContainer')">+ Add Carton</button>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('walmart','856')">&#8659;&ensp;Generate 856 EDI</button>
+        </div>
+      </div><!-- /wmTab856 -->
+
+    </div><!-- /walmartSection -->
+
+    <!-- ════════════════════════════════════════════════════════════════
+         COSTCO SECTION
+         ════════════════════════════════════════════════════════════════ -->
+    <div id="costcoSection" class="retailer-section" style="display:none;">
+
+      <div class="card">
+        <h2>Costco EDI Configuration</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="coVendorNum">Costco Vendor Number</label>
+            <input type="text" id="coVendorNum" value="YOURVENDORNUM" maxlength="15">
+            <span class="hint">Used as ISA sender ID &amp; vendor reference</span>
+          </div>
+          <div class="field">
+            <label for="coSenderName">Your Company Name</label>
+            <input type="text" id="coSenderName" value="YOUR COMPANY NAME">
+          </div>
+          <div class="field">
+            <label for="coEnv">Environment</label>
+            <select id="coEnv">
+              <option value="P">Production (P)</option>
+              <option value="T" selected>Test (T)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-bar" id="costcoStepBar">
+        <div class="step-item" id="costcoStep1" onclick="handleStepClick('costco',1)">
+          <div class="step-circle" id="costcoCircle1">1</div>
+          <div class="step-label">Upload PO</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="costcoLine1"></div>
+        <div class="step-item" id="costcoStep2" onclick="handleStepClick('costco',2)">
+          <div class="step-circle" id="costcoCircle2">2</div>
+          <div class="step-label">Ship Notice (856)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <div class="step-connector" id="costcoLine2"></div>
+        <div class="step-item" id="costcoStep3" onclick="handleStepClick('costco',3)">
+          <div class="step-circle" id="costcoCircle3">3</div>
+          <div class="step-label">Invoice (810)</div>
+          <div class="step-tooltip"></div>
+        </div>
+        <button class="btn-new-shipment" onclick="resetShipment('costco')">&#8635;&ensp;New Shipment</button>
+      </div>
+
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab(this,'coTab810')">810 Invoice</button>
+        <button class="tab-btn"        onclick="switchTab(this,'coTab856')">856 Ship Notice</button>
+      </div>
+
+      <!-- Costco 856 -->
+      <div id="coTab856" class="tab-panel">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="costcoAsnPdfInput">
+              &#128196;&ensp;Upload Ship Notice PDF
+            </label>
+            <input type="file" id="costcoAsnPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handleShipNoticePdfUpload(this,'costco')">
+            <span class="upload-hint">Parses a ship notice PDF and pre-fills this form</span>
+          </div>
+          <div id="coAsnPdfBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Shipment Details</h2>
+          <div class="grid">
+            <div class="field"><label for="coAsnShipmentId">Shipment ID</label><input type="text" id="coAsnShipmentId" placeholder="SHIP-001"></div>
+            <div class="field"><label for="coAsnShipDate">Ship Date</label><input type="date" id="coAsnShipDate"></div>
+            <div class="field"><label for="coAsnDelivDate">Expected Delivery Date</label><input type="date" id="coAsnDelivDate"></div>
+            <div class="field"><label for="coAsnScac">Carrier SCAC</label><input type="text" id="coAsnScac" placeholder="UPSN" maxlength="4"><span class="hint">e.g. UPSN, FDEG, FXFE</span></div>
+            <div class="field"><label for="coAsnTracking">Carrier PRO / Tracking #</label><input type="text" id="coAsnTracking" placeholder="1Z999AA10123456784"></div>
+            <div class="field"><label for="coAsnBol">Bill of Lading #</label><input type="text" id="coAsnBol" placeholder="BOL-12345"></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>Ship From (Your Warehouse)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="coAsnSfName">Company Name</label><input type="text" id="coAsnSfName" placeholder="Acme Warehouse LLC"></div>
+              <div class="field f-addr"><label for="coAsnSfAddr">Street Address</label><input type="text" id="coAsnSfAddr" placeholder="123 Warehouse Blvd"></div>
+              <div class="field f-city"><label for="coAsnSfCity">City</label><input type="text" id="coAsnSfCity" placeholder="Los Angeles"></div>
+              <div class="field"><label for="coAsnSfState">State</label><input type="text" id="coAsnSfState" placeholder="CA" maxlength="2"></div>
+              <div class="field"><label for="coAsnSfZip">Zip</label><input type="text" id="coAsnSfZip" placeholder="90001"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Ship To (Costco DC)</h2>
+            <div class="addr-grid">
+              <div class="field f-name"><label for="coAsnStName">DC Name</label><input type="text" id="coAsnStName" placeholder="COSTCO DC 101"></div>
+              <div class="field f-name"><label for="coAsnStDcCode">Costco DC Code</label><input type="text" id="coAsnStDcCode" placeholder="101"><span class="hint">Costco-assigned DC number</span></div>
+              <div class="field f-addr"><label for="coAsnStAddr">Street Address</label><input type="text" id="coAsnStAddr" placeholder="1 Distribution Dr"></div>
+              <div class="field f-city"><label for="coAsnStCity">City</label><input type="text" id="coAsnStCity" placeholder="Mira Loma"></div>
+              <div class="field"><label for="coAsnStState">State</label><input type="text" id="coAsnStState" placeholder="CA" maxlength="2"></div>
+              <div class="field"><label for="coAsnStZip">Zip</label><input type="text" id="coAsnStZip" placeholder="91752"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Order (PO)</h2>
+          <div class="grid">
+            <div class="field"><label for="coAsnPoNumber">PO Number</label><input type="text" id="coAsnPoNumber" placeholder="1234567890"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Cartons / Packs</h2>
+          <div id="coCartonsContainer"></div>
+          <button class="btn btn-secondary" onclick="addCartonCostco('coCartonsContainer')">+ Add Carton</button>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('costco','856')">&#8659;&ensp;Generate 856 EDI</button>
+        </div>
+      </div><!-- /coTab856 -->
+
+      <!-- Costco 810 -->
+      <div id="coTab810" class="tab-panel active">
+        <div class="upload-bar">
+          <div class="upload-row">
+            <label class="btn-upload" for="costcoUploadInput">
+              &#8593;&ensp;Upload 850 PO File
+            </label>
+            <input type="file" id="costcoUploadInput" accept=".edi,.txt"
+                   style="display:none;" onchange="handle850Upload(this,'costco')">
+            <label class="btn-upload" for="costcoPdfInput">
+              &#128196;&ensp;Upload Supplier Invoice PDF
+            </label>
+            <input type="file" id="costcoPdfInput" accept=".pdf"
+                   style="display:none;" onchange="handlePdfUpload(this,'costco')">
+            <span class="upload-hint">Upload a PO file or supplier invoice PDF to pre-fill forms</span>
+          </div>
+          <div id="costcoPoBanner" class="po-banner"></div>
+        </div>
+
+        <div class="card">
+          <h2>Invoice Details</h2>
+          <div class="grid">
+            <div class="field"><label for="coInvoiceNum">Invoice Number</label><input type="text" id="coInvoiceNum" placeholder="INV-001"></div>
+            <div class="field"><label for="coInvoiceDate">Invoice Date</label><input type="date" id="coInvoiceDate"></div>
+            <div class="field"><label for="coPoNum">PO Number</label><input type="text" id="coPoNum" placeholder="1234567890"></div>
+            <div class="field"><label for="coShipDate">Ship Date</label><input type="date" id="coShipDate"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Costco Reference Numbers</h2>
+          <div class="grid">
+            <div class="field">
+              <label for="coBuyerNum">Costco Buyer Number</label>
+              <input type="text" id="coBuyerNum" placeholder="12345">
+              <span class="hint">Costco buyer/department number (REF*DP)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>Your (Vendor) Address</h2>
+            <div class="addr-grid">
+              <div class="field f-addr"><label for="coVendorStreet">Street Address</label><input type="text" id="coVendorStreet" placeholder="456 Supplier Rd"></div>
+              <div class="field f-city"><label for="coVendorCity">City</label><input type="text" id="coVendorCity" placeholder="Chicago"></div>
+              <div class="field"><label for="coVendorState">State</label><input type="text" id="coVendorState" placeholder="IL" maxlength="2"></div>
+              <div class="field"><label for="coVendorZip">Zip</label><input type="text" id="coVendorZip" placeholder="60601"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Costco Buyer Address</h2>
+            <div class="addr-grid">
+              <div class="field f-addr"><label for="coBuyerStreet">Street Address</label><input type="text" id="coBuyerStreet" value="999 LAKE DR"></div>
+              <div class="field f-city"><label for="coBuyerCity">City</label><input type="text" id="coBuyerCity" value="ISSAQUAH"></div>
+              <div class="field"><label for="coBuyerState">State</label><input type="text" id="coBuyerState" value="WA" maxlength="2"></div>
+              <div class="field"><label for="coBuyerZip">Zip</label><input type="text" id="coBuyerZip" value="98027"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Ship To (Costco DC)</h2>
+          <div class="addr-grid">
+            <div class="field f-name"><label for="coStDcName">DC Name</label><input type="text" id="coStDcName" placeholder="COSTCO DC 101"></div>
+            <div class="field f-name"><label for="coStDcCode">DC Code</label><input type="text" id="coStDcCode" placeholder="101"><span class="hint">Costco-assigned DC number</span></div>
+            <div class="field f-addr"><label for="coStAddr">Street Address</label><input type="text" id="coStAddr" placeholder="1 Distribution Dr"></div>
+            <div class="field f-city"><label for="coStCity">City</label><input type="text" id="coStCity" placeholder="Mira Loma"></div>
+            <div class="field"><label for="coStState">State</label><input type="text" id="coStState" placeholder="CA" maxlength="2"></div>
+            <div class="field"><label for="coStZip">Zip</label><input type="text" id="coStZip" placeholder="91752"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Line Items</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th class="col-upc">Item UPC</th><th class="col-desc">Description</th>
+                <th class="col-qty">Qty</th><th class="col-price">Unit Price ($)</th><th class="col-remove"></th>
+              </tr></thead>
+              <tbody id="coLineItemsBody"></tbody>
+            </table>
+          </div>
+          <div class="line-empty-state">
+            <span class="empty-icon">📦</span>
+            <span class="empty-text">No items yet — add a line item to get started</span>
+          </div>
+          <div class="table-footer">
+            <button class="btn btn-secondary" onclick="addLineItem('coLineItemsBody','coTotalDisplay')">+ Add Line Item</button>
+            <div class="total-display">Total: <span id="coTotalDisplay">$0.00</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generateAndDownload('costco','810')">&#8659;&ensp;Generate 810 EDI</button>
+        </div>
+      </div><!-- /coTab810 -->
+
+    </div><!-- /costcoSection -->
+
+
+    <!-- ── Shared EDI Preview ────────────────────────────────────────── -->
+    <div class="card" id="previewCard" style="margin-top:0.5rem;">
+      <div class="preview-header">
+        <h2 style="margin:0;">EDI Preview</h2>
+        <button class="btn btn-copy" onclick="copyEDI()">Copy</button>
+      </div>
+      <pre id="ediPreview"></pre>
+    </div>
+
+  </div><!-- /container -->
+
+<script>
+  // ════════════════════════════════════════════════════════════
+  // State
+  // ════════════════════════════════════════════════════════════
+
+  let retailer     = 'amazon';
+  let lineCounter  = 0;
+  let cartonCounter = 0;
+  let itemCounter  = 0;
+  let lastEDI      = '';
+
+  // ════════════════════════════════════════════════════════════
+  // Retailer switching
+  // ════════════════════════════════════════════════════════════
+
+  function selectRetailer(name) {
+    retailer = name;
+    const isWM = name === 'walmart';
+    const isCO = name === 'costco';
+    const isAM = name === 'amazon';
+
+    document.getElementById('amazonSection').style.display  = isAM ? 'block' : 'none';
+    document.getElementById('walmartSection').style.display = isWM ? 'block' : 'none';
+    document.getElementById('costcoSection').style.display  = isCO ? 'block' : 'none';
+
+    document.getElementById('btnAmazon').classList.toggle('active',  isAM);
+    document.getElementById('btnWalmart').classList.toggle('active', isWM);
+    document.getElementById('btnCostco').classList.toggle('active',  isCO);
+
+    let accent, accentDark, accentDarker, accentRgb;
+    if (isWM) {
+      accent = '#0071CE'; accentDark = '#005fa3'; accentDarker = '#004b8a'; accentRgb = '0, 113, 206';
+    } else if (isCO) {
+      accent = '#E31837'; accentDark = '#c21430'; accentDarker = '#a01028'; accentRgb = '227, 24, 55';
+    } else {
+      accent = '#FF9900'; accentDark = '#e07f00'; accentDarker = '#c46f00'; accentRgb = '255, 153, 0';
+    }
+
+    const root = document.documentElement.style;
+    root.setProperty('--accent',        accent);
+    root.setProperty('--accent-dark',   accentDark);
+    root.setProperty('--accent-darker', accentDarker);
+    root.setProperty('--accent-rgb',    accentRgb);
+
+    document.getElementById('previewCard').style.display = 'none';
+
+    // Trigger entrance animation on newly visible section
+    const activeEl = document.getElementById(isAM ? 'amazonSection' : isWM ? 'walmartSection' : 'costcoSection');
+    activeEl.classList.remove('retailer-entering');
+    void activeEl.offsetWidth;
+    activeEl.classList.add('retailer-entering');
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Tab switching (scoped to the active retailer section)
+  // ════════════════════════════════════════════════════════════
+
+  function switchTab(btn, panelId) {
+    const section = btn.closest('.retailer-section');
+    section.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    section.querySelectorAll('.tab-btn').forEach(b   => b.classList.remove('active'));
+    document.getElementById(panelId).classList.add('active');
+    btn.classList.add('active');
+    document.getElementById('previewCard').style.display = 'none';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Shared helpers
+  // ════════════════════════════════════════════════════════════
+
+  function padRight(str, len) {
+    return String(str).slice(0, len).padEnd(len, ' ');
+  }
+
+  function isaDate(d) {
+    return String(d.getFullYear()).slice(2) +
+           String(d.getMonth() + 1).padStart(2, '0') +
+           String(d.getDate()).padStart(2, '0');
+  }
+
+  function gsDate(d) {
+    return String(d.getFullYear()) +
+           String(d.getMonth() + 1).padStart(2, '0') +
+           String(d.getDate()).padStart(2, '0');
+  }
+
+  function isaTime(d) {
+    return String(d.getHours()).padStart(2, '0') +
+           String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function toDate8(v) { return v.replace(/-/g, ''); }
+
+  function formatMoney(cents) {
+    return '$' + (cents / 100).toLocaleString('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+  }
+
+  function ediErr(msg) { alert(msg); return null; }
+
+  // Returns ISA + GS lines and shared envelope values
+  function makeEnvelope(senderRaw, receiverRaw, receiverQual, gsCode, env, now) {
+    const senderId   = padRight(senderRaw, 15);
+    const receiverId = padRight(receiverRaw, 15);
+    const iDate      = isaDate(now);
+    const iTime      = isaTime(now);
+    const gDate      = gsDate(now);
+    const ctrlNum    = String(Date.now() % 999999999 + 1).padStart(9, '0');
+    const isa = `ISA*00*          *00*          *ZZ*${senderId}*${receiverQual}*${receiverId}*${iDate}*${iTime}*^*00501*${ctrlNum}*0*${env}*>`;
+    const gs  = `GS*${gsCode}*${senderRaw}*${receiverRaw}*${gDate}*${iTime}*1*X*005010`;
+    return { isa, gs, iTime, ctrlNum };
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Line item management (parameterised by table IDs)
+  // ════════════════════════════════════════════════════════════
+
+  function addLineItem(tbodyId, totalId) {
+    lineCounter++;
+    const tbody = document.getElementById(tbodyId);
+    const tr    = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="line-num">${tbody.rows.length + 1}</td>
+      <td class="col-upc"><input type="text" class="upc" placeholder="012345678901"></td>
+      <td class="col-desc"><input type="text" class="desc" placeholder="Product description"></td>
+      <td class="col-qty"><input type="number" class="qty" value="1" min="1" step="1"
+          oninput="updateTotal('${tbodyId}','${totalId}')"></td>
+      <td class="col-price"><input type="number" class="price" placeholder="0.00" min="0" step="0.01"
+          oninput="updateTotal('${tbodyId}','${totalId}')"></td>
+      <td class="col-remove"><button class="btn-remove"
+          onclick="removeLineItem(this,'${tbodyId}','${totalId}')" title="Remove">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+    tr.querySelector('.upc').focus();
+    updateTotal(tbodyId, totalId);
+  }
+
+  function removeLineItem(btn, tbodyId, totalId) {
+    btn.closest('tr').remove();
+    document.querySelectorAll(`#${tbodyId} tr`).forEach((tr, i) => {
+      tr.cells[0].textContent = i + 1;
+    });
+    updateTotal(tbodyId, totalId);
+  }
+
+  function updateTotal(tbodyId, totalId) {
+    let cents = 0;
+    document.querySelectorAll(`#${tbodyId} tr`).forEach(tr => {
+      const qty   = parseFloat(tr.querySelector('.qty')?.value)   || 0;
+      const price = parseFloat(tr.querySelector('.price')?.value) || 0;
+      cents += Math.round(qty * price * 100);
+    });
+    document.getElementById(totalId).textContent = formatMoney(cents);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Carton management (parameterised by container ID)
+  // ════════════════════════════════════════════════════════════
+
+  function addCarton(containerId) {
+    cartonCounter++;
+    const container = document.getElementById(containerId);
+    const num = container.querySelectorAll('.carton-block').length + 1;
+    const div = document.createElement('div');
+    div.className = 'carton-block';
+    div.innerHTML = `
+      <div class="carton-header">
+        <span class="carton-label">Carton ${num}</span>
+        <button class="btn-remove" onclick="removeCarton(this)" title="Remove carton">&times;</button>
+      </div>
+      <div class="carton-fields">
+        <div class="field"><label>Carton / SSCC #</label><input type="text" class="carton-num" placeholder="CTN-001"></div>
+        <div class="field"><label>Weight (lbs)</label><input type="number" class="carton-weight" placeholder="0.0" min="0" step="0.1"></div>
+        <div class="field"><label>Length (in)</label><input type="number" class="carton-length" placeholder="0" min="0" step="0.1"></div>
+        <div class="field"><label>Width (in)</label><input type="number" class="carton-width" placeholder="0" min="0" step="0.1"></div>
+        <div class="field"><label>Height (in)</label><input type="number" class="carton-height" placeholder="0" min="0" step="0.1"></div>
+      </div>
+      <div class="carton-items-section">
+        <div class="sub-heading">Items in this carton</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>UPC</th><th style="width:90px;">Quantity</th><th style="width:40px;"></th></tr></thead>
+            <tbody class="carton-items-body"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:0.6rem;font-size:0.78rem;padding:0.3rem 0.75rem;"
+                onclick="addItemToCarton(this)">+ Add Item</button>
+      </div>
+    `;
+    container.appendChild(div);
+    addItemToCarton(div.querySelector('.carton-items-section button'));
+  }
+
+  function removeCarton(btn) {
+    const block     = btn.closest('.carton-block');
+    const container = block.parentElement;
+    block.remove();
+    container.querySelectorAll('.carton-block').forEach((b, i) => {
+      b.querySelector('.carton-label').textContent = `Carton ${i + 1}`;
+    });
+  }
+
+  function addItemToCarton(btn) {
+    itemCounter++;
+    const tbody  = btn.closest('.carton-items-section').querySelector('.carton-items-body');
+    const rowNum = tbody.rows.length + 1;
+    const tr     = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="line-num">${rowNum}</td>
+      <td><input type="text" class="item-upc" placeholder="012345678901"></td>
+      <td><input type="number" class="item-qty" value="1" min="1" step="1"></td>
+      <td class="col-remove"><button class="btn-remove" onclick="removeCartonItem(this)">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function removeCartonItem(btn) {
+    const tbody = btn.closest('tbody');
+    btn.closest('tr').remove();
+    tbody.querySelectorAll('tr').forEach((tr, i) => { tr.cells[0].textContent = i + 1; });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Shared carton-to-segments builder (used by both 856s)
+  // ════════════════════════════════════════════════════════════
+
+  function buildCartonHL(seg, hlSeqRef, containerId, hlOrderNum) {
+    document.querySelectorAll(`#${containerId} .carton-block`).forEach(block => {
+      const cartonNum = block.querySelector('.carton-num').value.trim();
+      const weight    = parseFloat(block.querySelector('.carton-weight').value) || 0;
+      const len       = block.querySelector('.carton-length').value;
+      const wid       = block.querySelector('.carton-width').value;
+      const hgt       = block.querySelector('.carton-height').value;
+      const itemRows  = block.querySelectorAll('.carton-items-body tr');
+
+      const hlPack = ++hlSeqRef.v;
+      seg.push(`HL*${hlPack}*${hlOrderNum}*P*${itemRows.length > 0 ? 1 : 0}`);
+      seg.push(`MAN*GM*${cartonNum}`);
+      seg.push(`TD1*CTN*1***G*${weight.toFixed(1)}*LB`);
+      if (len && wid && hgt) {
+        seg.push(`MEA*PD*LN*${len}*IN`);
+        seg.push(`MEA*PD*WD*${wid}*IN`);
+        seg.push(`MEA*PD*HT*${hgt}*IN`);
+      }
+
+      itemRows.forEach(row => {
+        const upc = row.querySelector('.item-upc').value.trim();
+        const qty = row.querySelector('.item-qty').value || '1';
+        const hlItem = ++hlSeqRef.v;
+        seg.push(`HL*${hlItem}*${hlPack}*I*0`);
+        seg.push(`LIN**UP*${upc}`);
+        seg.push(`SN1**${qty}*EA`);
+      });
+    });
+  }
+
+  // SE segment count helper
+  function pushSE(seg) {
+    const stIdx    = seg.findIndex(s => s.startsWith('ST*'));
+    const segCount = (seg.length - stIdx) + 1;
+    seg.push(`SE*${segCount}*0001`);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Amazon 810
+  // ════════════════════════════════════════════════════════════
+
+  function build810Amazon() {
+    const now        = new Date();
+    const senderRaw  = document.getElementById('senderId').value.trim();
+    const senderName = document.getElementById('senderName').value.trim();
+    const vendorCode = document.getElementById('vendorCode').value.trim();
+    const env        = document.getElementById('isaEnv').value;
+
+    const invoiceNum     = document.getElementById('invoiceNum').value.trim();
+    const invoiceDateVal = document.getElementById('invoiceDate').value;
+    const poNumber       = document.getElementById('poNumber').value.trim();
+    const shipDateVal    = document.getElementById('shipDate').value;
+
+    if (!senderRaw)      return ediErr('Sender ISA ID is required (Amazon EDI Config).');
+    if (!senderName)     return ediErr('Company Name is required (Amazon EDI Config).');
+    if (!vendorCode)     return ediErr('Amazon Vendor Code is required.');
+    if (!invoiceNum)     return ediErr('Invoice Number is required.');
+    if (!invoiceDateVal) return ediErr('Invoice Date is required.');
+    if (!poNumber)       return ediErr('PO Number is required.');
+    if (!shipDateVal)    return ediErr('Ship Date is required.');
+
+    const rows = document.querySelectorAll('#lineItemsBody tr');
+    if (!rows.length) return ediErr('Add at least one line item.');
+
+    const items = [];
+    for (const tr of rows) {
+      const upc   = tr.querySelector('.upc').value.trim();
+      const desc  = tr.querySelector('.desc').value.trim();
+      const qty   = parseFloat(tr.querySelector('.qty').value);
+      const price = parseFloat(tr.querySelector('.price').value);
+      if (!upc)                      return ediErr('UPC is required for every line item.');
+      if (isNaN(qty) || qty <= 0)    return ediErr('Quantity must be positive for every line item.');
+      if (isNaN(price) || price < 0) return ediErr('Unit Price must be valid for every line item.');
+      items.push({ upc, desc, qty, price });
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(senderRaw, 'AMAZON', 'ZZ', 'IN', env, now);
+    const invoiceDate = toDate8(invoiceDateVal);
+    const shipDate    = toDate8(shipDateVal);
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*810*0001`);
+    seg.push(`BIG*${invoiceDate}*${invoiceNum}**${poNumber}`);
+    seg.push(`REF*IA*${vendorCode}`);
+    seg.push(`DTM*011*${shipDate}`);
+    seg.push(`N1*BY*AMAZON.COM LLC*92*AMAZON`);
+    seg.push(`N1*SE*${senderName}*92*${vendorCode}`);
+
+    let totalCents = 0;
+    items.forEach((item, i) => {
+      totalCents += Math.round(item.qty * item.price * 100);
+      seg.push(`IT1*${i + 1}*${item.qty}*EA*${item.price.toFixed(2)}**UP*${item.upc}`);
+      if (item.desc) seg.push(`PID*F****${item.desc}`);
+    });
+
+    const totalQty = items.reduce((s, it) => s + it.qty, 0);
+    seg.push(`CTT*${items.length}*${totalQty}`);
+    seg.push(`TDS*${totalCents}`);
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Amazon 856
+  // ════════════════════════════════════════════════════════════
+
+  function build856Amazon() {
+    const now       = new Date();
+    const senderRaw = document.getElementById('senderId').value.trim();
+    const senderName= document.getElementById('senderName').value.trim();
+    const vendorCode= document.getElementById('vendorCode').value.trim();
+    const env       = document.getElementById('isaEnv').value;
+
+    const shipmentId  = document.getElementById('asnShipmentId').value.trim();
+    const shipDateVal = document.getElementById('asnShipDate').value;
+    const delivDateVal= document.getElementById('asnDelivDate').value;
+    const scac        = document.getElementById('asnScac').value.trim().toUpperCase();
+    const tracking    = document.getElementById('asnTracking').value.trim();
+    const bol         = document.getElementById('asnBol').value.trim();
+
+    const sfName  = document.getElementById('asnSfName').value.trim();
+    const sfAddr  = document.getElementById('asnSfAddr').value.trim();
+    const sfCity  = document.getElementById('asnSfCity').value.trim();
+    const sfState = document.getElementById('asnSfState').value.trim();
+    const sfZip   = document.getElementById('asnSfZip').value.trim();
+
+    const stDc    = document.getElementById('asnStDcCode').value.trim();
+    const stAddr  = document.getElementById('asnStAddr').value.trim();
+    const stCity  = document.getElementById('asnStCity').value.trim();
+    const stState = document.getElementById('asnStState').value.trim();
+    const stZip   = document.getElementById('asnStZip').value.trim();
+
+    const poNumber = document.getElementById('asnPoNumber').value.trim();
+
+    if (!senderRaw)   return ediErr('Sender ISA ID is required (Amazon EDI Config).');
+    if (!shipmentId)  return ediErr('Shipment ID is required.');
+    if (!shipDateVal) return ediErr('Ship Date is required.');
+    if (!scac)        return ediErr('Carrier SCAC is required.');
+    if (!sfName)      return ediErr('Ship From company name is required.');
+    if (!stDc)        return ediErr('Amazon DC Code is required.');
+    if (!poNumber)    return ediErr('PO Number is required.');
+
+    const cartons = document.querySelectorAll('#cartonsContainer .carton-block');
+    if (!cartons.length) return ediErr('Add at least one carton.');
+    for (const b of cartons) {
+      if (!b.querySelector('.carton-num').value.trim()) return ediErr('Every carton needs a carton number.');
+      const items = b.querySelectorAll('.carton-items-body tr');
+      if (!items.length) return ediErr('Every carton needs at least one item.');
+      for (const r of items) if (!r.querySelector('.item-upc').value.trim()) return ediErr('Every item needs a UPC.');
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(senderRaw, 'AMAZON', 'ZZ', 'SH', env, now);
+    const shipDate  = toDate8(shipDateVal);
+    const delivDate = delivDateVal ? toDate8(delivDateVal) : '';
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*856*0001`);
+    seg.push(`BSN*00*${shipmentId}*${shipDate}*${iTime}*0001`);
+    seg.push(`DTM*011*${shipDate}`);
+    if (delivDate) seg.push(`DTM*017*${delivDate}`);
+
+    const hlSeq = { v: 0 };
+    const hlShip = ++hlSeq.v;
+    seg.push(`HL*${hlShip}**S*1`);
+    seg.push(`TD5*B*2*${scac}**${tracking}`);
+    if (bol) seg.push(`TD3***${bol}`);
+
+    seg.push(`N1*SF*${sfName}`);
+    if (sfAddr) seg.push(`N3*${sfAddr}`);
+    if (sfCity || sfState || sfZip) seg.push(`N4*${sfCity}*${sfState}*${sfZip}`);
+
+    seg.push(`N1*ST**92*${stDc}`);
+    if (stAddr) seg.push(`N3*${stAddr}`);
+    if (stCity || stState || stZip) seg.push(`N4*${stCity}*${stState}*${stZip}`);
+
+    const hlOrder = ++hlSeq.v;
+    seg.push(`HL*${hlOrder}*${hlShip}*O*1`);
+    seg.push(`PRF*${poNumber}`);
+
+    buildCartonHL(seg, hlSeq, 'cartonsContainer', hlOrder);
+
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Walmart 810
+  // ════════════════════════════════════════════════════════════
+
+  function build810Walmart() {
+    const now        = new Date();
+    const vendorNum  = document.getElementById('wmVendorNum').value.trim();
+    const senderName = document.getElementById('wmSenderName').value.trim();
+    const env        = document.getElementById('wmEnv').value;
+
+    const invoiceNum     = document.getElementById('wmInvoiceNum').value.trim();
+    const invoiceDateVal = document.getElementById('wmInvoiceDate').value;
+    const poNumber       = document.getElementById('wmPoNum').value.trim();
+    const shipDateVal    = document.getElementById('wmShipDate').value;
+    const deptNum        = document.getElementById('wmDeptNum').value.trim();
+
+    const vendorStreet = document.getElementById('wmVendorStreet').value.trim();
+    const vendorCity   = document.getElementById('wmVendorCity').value.trim();
+    const vendorState  = document.getElementById('wmVendorState').value.trim();
+    const vendorZip    = document.getElementById('wmVendorZip').value.trim();
+
+    const buyerStreet = document.getElementById('wmBuyerStreet').value.trim();
+    const buyerCity   = document.getElementById('wmBuyerCity').value.trim();
+    const buyerState  = document.getElementById('wmBuyerState').value.trim();
+    const buyerZip    = document.getElementById('wmBuyerZip').value.trim();
+
+    if (!vendorNum)      return ediErr('Walmart Vendor Number is required (Walmart EDI Config).');
+    if (!senderName)     return ediErr('Company Name is required (Walmart EDI Config).');
+    if (!invoiceNum)     return ediErr('Invoice Number is required.');
+    if (!invoiceDateVal) return ediErr('Invoice Date is required.');
+    if (!poNumber)       return ediErr('PO Number is required.');
+    if (!shipDateVal)    return ediErr('Ship Date is required.');
+
+    const rows = document.querySelectorAll('#wmLineItemsBody tr');
+    if (!rows.length) return ediErr('Add at least one line item.');
+
+    const items = [];
+    for (const tr of rows) {
+      const upc   = tr.querySelector('.upc').value.trim();
+      const desc  = tr.querySelector('.desc').value.trim();
+      const qty   = parseFloat(tr.querySelector('.qty').value);
+      const price = parseFloat(tr.querySelector('.price').value);
+      if (!upc)                      return ediErr('UPC is required for every line item.');
+      if (isNaN(qty) || qty <= 0)    return ediErr('Quantity must be positive for every line item.');
+      if (isNaN(price) || price < 0) return ediErr('Unit Price must be valid for every line item.');
+      items.push({ upc, desc, qty, price });
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(vendorNum, '012069349', '01', 'IN', env, now);
+    const invoiceDate = toDate8(invoiceDateVal);
+    const shipDate    = toDate8(shipDateVal);
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*810*0001`);
+    seg.push(`BIG*${invoiceDate}*${invoiceNum}**${poNumber}`);
+    if (deptNum) seg.push(`REF*DP*${deptNum}`);
+    seg.push(`REF*VN*${vendorNum}`);
+    seg.push(`DTM*011*${invoiceDate}`);
+
+    seg.push(`N1*BY*WAL-MART STORES INC*UL*0078742000992`);
+    if (buyerStreet) seg.push(`N3*${buyerStreet}`);
+    if (buyerCity || buyerState || buyerZip) seg.push(`N4*${buyerCity}*${buyerState}*${buyerZip}`);
+
+    seg.push(`N1*SE*${senderName}*92*${vendorNum}`);
+    if (vendorStreet) seg.push(`N3*${vendorStreet}`);
+    if (vendorCity || vendorState || vendorZip) seg.push(`N4*${vendorCity}*${vendorState}*${vendorZip}`);
+
+    let totalCents = 0;
+    items.forEach((item, i) => {
+      totalCents += Math.round(item.qty * item.price * 100);
+      seg.push(`IT1*${i + 1}*${item.qty}*EA*${item.price.toFixed(2)}**UP*${item.upc}`);
+      if (item.desc) seg.push(`PID*F****${item.desc}`);
+    });
+
+    const totalQty = items.reduce((s, it) => s + it.qty, 0);
+    seg.push(`CTT*${items.length}*${totalQty}`);
+    seg.push(`TDS*${totalCents}`);
+    seg.push(`TXI*TX*0*0`);
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Walmart 856
+  // ════════════════════════════════════════════════════════════
+
+  function build856Walmart() {
+    const now       = new Date();
+    const vendorNum = document.getElementById('wmVendorNum').value.trim();
+    const senderName= document.getElementById('wmSenderName').value.trim();
+    const env       = document.getElementById('wmEnv').value;
+
+    const shipmentId  = document.getElementById('wmAsnShipmentId').value.trim();
+    const shipDateVal = document.getElementById('wmAsnShipDate').value;
+    const delivDateVal= document.getElementById('wmAsnDelivDate').value;
+    const scac        = document.getElementById('wmAsnScac').value.trim().toUpperCase();
+    const tracking    = document.getElementById('wmAsnTracking').value.trim();
+    const bol         = document.getElementById('wmAsnBol').value.trim();
+
+    const sfName  = document.getElementById('wmAsnSfName').value.trim();
+    const sfAddr  = document.getElementById('wmAsnSfAddr').value.trim();
+    const sfCity  = document.getElementById('wmAsnSfCity').value.trim();
+    const sfState = document.getElementById('wmAsnSfState').value.trim();
+    const sfZip   = document.getElementById('wmAsnSfZip').value.trim();
+
+    const stName  = document.getElementById('wmAsnStName').value.trim();
+    const stDc    = document.getElementById('wmAsnStDcCode').value.trim();
+    const stAddr  = document.getElementById('wmAsnStAddr').value.trim();
+    const stCity  = document.getElementById('wmAsnStCity').value.trim();
+    const stState = document.getElementById('wmAsnStState').value.trim();
+    const stZip   = document.getElementById('wmAsnStZip').value.trim();
+
+    const poNumber = document.getElementById('wmAsnPoNumber').value.trim();
+
+    if (!vendorNum)   return ediErr('Walmart Vendor Number is required (Walmart EDI Config).');
+    if (!shipmentId)  return ediErr('Shipment ID is required.');
+    if (!shipDateVal) return ediErr('Ship Date is required.');
+    if (!scac)        return ediErr('Carrier SCAC is required.');
+    if (!sfName)      return ediErr('Ship From company name is required.');
+    if (!stDc)        return ediErr('Walmart DC Code is required.');
+    if (!poNumber)    return ediErr('PO Number is required.');
+
+    const cartons = document.querySelectorAll('#wmCartonsContainer .carton-block');
+    if (!cartons.length) return ediErr('Add at least one carton.');
+    for (const b of cartons) {
+      if (!b.querySelector('.carton-num').value.trim()) return ediErr('Every carton needs a carton number.');
+      const items = b.querySelectorAll('.carton-items-body tr');
+      if (!items.length) return ediErr('Every carton needs at least one item.');
+      for (const r of items) if (!r.querySelector('.item-upc').value.trim()) return ediErr('Every item needs a UPC.');
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(vendorNum, '012069349', '01', 'SH', env, now);
+    const shipDate  = toDate8(shipDateVal);
+    const delivDate = delivDateVal ? toDate8(delivDateVal) : '';
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*856*0001`);
+    seg.push(`BSN*00*${shipmentId}*${shipDate}*${iTime}*0001`);
+    seg.push(`DTM*011*${shipDate}`);
+    if (delivDate) seg.push(`DTM*017*${delivDate}`);
+
+    const hlSeq = { v: 0 };
+    const hlShip = ++hlSeq.v;
+    seg.push(`HL*${hlShip}**S*1`);
+    seg.push(`TD5*B*2*${scac}**${tracking}`);
+    if (bol) seg.push(`TD3***${bol}`);
+
+    seg.push(`N1*SF*${sfName}*92*${vendorNum}`);
+    if (sfAddr) seg.push(`N3*${sfAddr}`);
+    if (sfCity || sfState || sfZip) seg.push(`N4*${sfCity}*${sfState}*${sfZip}`);
+
+    seg.push(`N1*ST*${stName}*92*${stDc}`);
+    if (stAddr) seg.push(`N3*${stAddr}`);
+    if (stCity || stState || stZip) seg.push(`N4*${stCity}*${stState}*${stZip}`);
+
+    const hlOrder = ++hlSeq.v;
+    seg.push(`HL*${hlOrder}*${hlShip}*O*1`);
+    seg.push(`PRF*${poNumber}`);
+
+    buildCartonHL(seg, hlSeq, 'wmCartonsContainer', hlOrder);
+
+    const allItemRows = document.querySelectorAll('#wmCartonsContainer .carton-items-body tr');
+    const wmCttQty = Array.from(allItemRows).reduce((s, r) => s + (parseFloat(r.querySelector('.item-qty').value) || 0), 0);
+    seg.push(`CTT*${allItemRows.length}*${wmCttQty}`);
+
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Download + preview
+  // ════════════════════════════════════════════════════════════
+
+  function showAndDownload(edi, filename) {
+    lastEDI = edi;
+    document.getElementById('ediPreview').textContent = edi;
+    const card = document.getElementById('previewCard');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const blob = new Blob([edi], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+
+    const banner = document.getElementById('successBanner');
+    banner.classList.add('visible');
+    setTimeout(() => banner.classList.remove('visible'), 4000);
+  }
+
+  function generateAndDownload(ret, type) {
+    let edi   = null;
+    let refId = '';
+
+    if (ret === 'amazon'  && type === '810') { edi = build810Amazon();  refId = document.getElementById('invoiceNum').value.trim(); }
+    else if (ret === 'amazon'  && type === '856') { edi = build856Amazon();  refId = document.getElementById('asnShipmentId').value.trim(); }
+    else if (ret === 'walmart' && type === '810') { edi = build810Walmart(); refId = document.getElementById('wmInvoiceNum').value.trim(); }
+    else if (ret === 'walmart' && type === '856') { edi = build856Walmart(); refId = document.getElementById('wmAsnShipmentId').value.trim(); }
+    else if (ret === 'costco'  && type === '810') { edi = build810Costco();  refId = document.getElementById('coInvoiceNum').value.trim(); }
+    else if (ret === 'costco'  && type === '856') { edi = build856Costco();  refId = document.getElementById('coAsnShipmentId').value.trim(); }
+
+    if (!edi) return;
+    const safeId   = refId.replace(/[^\w\-]/g, '_') || type;
+    const filename = `${ret.toUpperCase()}_${type.toUpperCase()}_${safeId}.edi`;
+    showAndDownload(edi, filename);
+    markStep(ret, type === '856' ? 2 : 3);
+  }
+
+  function copyEDI() {
+    if (!lastEDI) return;
+    navigator.clipboard.writeText(lastEDI).then(() => {
+      const btn  = document.querySelector('.btn-copy');
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.textContent = orig), 1800);
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Step indicator
+  // ════════════════════════════════════════════════════════════
+
+  // Per-retailer step completion: 0=incomplete, 1=active, 2=complete
+  const stepState = {
+    amazon:  [1, 0, 0],
+    walmart: [1, 0, 0],
+    costco:  [1, 0, 0]
+  };
+
+  const stepTabMap = {
+    amazon:  { 2: 'tab856',   3: 'tab810'   },
+    walmart: { 2: 'wmTab856', 3: 'wmTab810' },
+    costco:  { 2: 'coTab856', 3: 'coTab810' }
+  };
+
+  const stepSecMap = {
+    amazon: 'amazonSection', walmart: 'walmartSection', costco: 'costcoSection'
+  };
+
+  function renderStepBar(ret) {
+    const states = stepState[ret];
+    for (let n = 1; n <= 3; n++) {
+      const item    = document.getElementById(`${ret}Step${n}`);
+      const circle  = document.getElementById(`${ret}Circle${n}`);
+      const tooltip = item.querySelector('.step-tooltip');
+      const state   = states[n - 1];
+
+      item.classList.remove('step-active', 'step-complete', 'step-locked', 'step-clickable');
+
+      if (state === 2) {
+        item.classList.add('step-complete');
+        if (n > 1) item.classList.add('step-clickable');
+        circle.textContent = '✓';
+        tooltip.textContent = n > 1 ? 'Click to jump to this step' : '';
+      } else if (state === 1) {
+        item.classList.add('step-active');
+        circle.textContent = String(n);
+        tooltip.textContent = '';
+      } else {
+        if (n > 1 && states[n - 2] < 2) item.classList.add('step-locked');
+        circle.textContent = String(n);
+        tooltip.textContent = n > 1 ? `Complete Step ${n - 1} first` : '';
+      }
+
+      if (n < 3) {
+        document.getElementById(`${ret}Line${n}`)
+          .classList.toggle('step-line-filled', states[n - 1] === 2);
+      }
+    }
+  }
+
+  function markStep(ret, n) {
+    stepState[ret][n - 1] = 2;
+    if (n < 3 && stepState[ret][n] === 0) stepState[ret][n] = 1;
+    renderStepBar(ret);
+  }
+
+  function handleStepClick(ret, n) {
+    if (stepState[ret][n - 1] !== 2) return;
+    const tabId = stepTabMap[ret] && stepTabMap[ret][n];
+    if (!tabId) return;
+    const secId  = stepSecMap[ret];
+    const tabBtn = document.querySelector(`#${secId} .tab-btn[onclick*="${tabId}"]`);
+    if (tabBtn) switchTab(tabBtn, tabId);
+  }
+
+  function resetShipment(ret) {
+    const name = ret.charAt(0).toUpperCase() + ret.slice(1);
+    if (!confirm(`Start a new shipment? All form data for ${name} will be cleared.`)) return;
+
+    const secId   = stepSecMap[ret];
+    const section = document.getElementById(secId);
+
+    // Clear all inputs inside tab panels only (preserve config card)
+    section.querySelectorAll('.tab-panel input[type="text"], .tab-panel input[type="number"]')
+      .forEach(el => { el.value = ''; });
+    section.querySelectorAll('.tab-panel input[type="date"]')
+      .forEach(el => { el.value = new Date().toISOString().slice(0, 10); });
+
+    // Rebuild line items and cartons
+    if (ret === 'amazon') {
+      document.getElementById('lineItemsBody').innerHTML = '';
+      addLineItem('lineItemsBody', 'totalDisplay');
+      document.getElementById('cartonsContainer').innerHTML = '';
+      addCarton('cartonsContainer');
+    } else if (ret === 'walmart') {
+      document.getElementById('wmLineItemsBody').innerHTML = '';
+      addLineItem('wmLineItemsBody', 'wmTotalDisplay');
+      document.getElementById('wmCartonsContainer').innerHTML = '';
+      addCarton('wmCartonsContainer');
+    } else {
+      document.getElementById('coLineItemsBody').innerHTML = '';
+      addLineItem('coLineItemsBody', 'coTotalDisplay');
+      document.getElementById('coCartonsContainer').innerHTML = '';
+      addCartonCostco('coCartonsContainer');
+    }
+
+    // Switch back to 810 tab and reset steps
+    const tab810 = ret === 'amazon' ? 'tab810' : ret === 'walmart' ? 'wmTab810' : 'coTab810';
+    const tabBtn = document.querySelector(`#${secId} .tab-btn[onclick*="${tab810}"]`);
+    if (tabBtn) switchTab(tabBtn, tab810);
+
+    stepState[ret] = [1, 0, 0];
+    renderStepBar(ret);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Init
+  // ════════════════════════════════════════════════════════════
+
+  (function init() {
+    const today = new Date().toISOString().slice(0, 10);
+    ['invoiceDate','shipDate','asnShipDate','wmInvoiceDate','wmShipDate','wmAsnShipDate',
+     'coInvoiceDate','coShipDate','coAsnShipDate'].forEach(id => {
+      document.getElementById(id).value = today;
+    });
+    addLineItem('lineItemsBody',   'totalDisplay');
+    addLineItem('wmLineItemsBody', 'wmTotalDisplay');
+    addLineItem('coLineItemsBody', 'coTotalDisplay');
+    addCarton('cartonsContainer');
+    addCarton('wmCartonsContainer');
+    addCartonCostco('coCartonsContainer');
+    renderStepBar('amazon');
+    renderStepBar('walmart');
+    renderStepBar('costco');
+
+    // Stagger card entrance on initial load (Amazon section is visible)
+    document.querySelectorAll('#amazonSection .card, #amazonSection .upload-bar, #amazonSection .step-bar').forEach((el, i) => {
+      el.style.animationDelay = `${i * 50}ms`;
+    });
+  })();
+
+  // ════════════════════════════════════════════════════════════
+  // 850 PO Upload — parse + auto-fill
+  // ════════════════════════════════════════════════════════════
+
+  // Convert EDI date (YYYYMMDD or YYMMDD) → HTML date input (YYYY-MM-DD)
+  function ediDateToInput(raw) {
+    const d = String(raw || '').replace(/\D/g, '');
+    if (d.length === 8) return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+    if (d.length === 6) {
+      const prefix = parseInt(d.slice(0,2)) >= 60 ? '19' : '20';
+      return `${prefix}${d.slice(0,2)}-${d.slice(2,4)}-${d.slice(4,6)}`;
+    }
+    return '';
+  }
+
+  function parse850(rawContent) {
+    const content = rawContent.replace(/^﻿/, '').trim();
+
+    // Locate ISA to read delimiters (ISA is always exactly 106 chars)
+    const isaIdx = content.indexOf('ISA');
+    if (isaIdx === -1 || content.length < isaIdx + 106) return null;
+
+    const isaStr = content.slice(isaIdx, isaIdx + 106);
+    const elemSep = isaStr[3];   // char at position 3 is element separator
+    const segTerm = isaStr[105]; // char at position 105 is segment terminator
+
+    // Split on segment terminator; strip any embedded whitespace from each segment
+    const segments = content
+      .split(segTerm)
+      .map(s => s.replace(/[\r\n\t]/g, '').trim())
+      .filter(s => s.length > 0);
+
+    const result = {
+      poNumber:     '',
+      poDate:       '',
+      shipDate:     '',
+      deliveryDate: '',
+      deptNum:      '',
+      vendorNum:    '',
+      shipTo: { name: '', code: '', addr: '', city: '', state: '', zip: '' },
+      buyerName:    '',
+      items:        []
+    };
+
+    let inTxn      = false;
+    let lastN1     = null;   // tracks which N1 loop we're inside
+    let currentItem = null;
+
+    for (const seg of segments) {
+      if (!seg) continue;
+      const el = seg.split(elemSep);
+      const id = el[0];
+
+      // Gate: only process segments inside an ST*850 transaction
+      if (id === 'ST') {
+        if (el[1] === '850') inTxn = true;
+        continue;
+      }
+      if (!inTxn) continue;
+
+      if (id === 'SE') {
+        if (currentItem) { result.items.push(currentItem); currentItem = null; }
+        inTxn = false;
+        continue;
+      }
+
+      switch (id) {
+
+        case 'BEG':
+          // BEG01=purpose, BEG02=type, BEG03=PO#, BEG04=release, BEG05=date
+          result.poNumber = el[3] || '';
+          result.poDate   = el[5] || '';
+          break;
+
+        case 'DTM':
+          if (el[1] === '010') result.shipDate     = el[2] || '';
+          if (el[1] === '002') result.deliveryDate = el[2] || '';
+          break;
+
+        case 'REF':
+          if (el[1] === 'DP') result.deptNum   = el[2] || '';
+          if (el[1] === 'VN') result.vendorNum = el[2] || '';
+          break;
+
+        case 'N1':
+          lastN1 = el[1] || '';
+          if (el[1] === 'ST') {
+            result.shipTo.name = el[2] || '';
+            // N104 is often a DC code (qualifier 92) or GLN (qualifier UL)
+            if (el[4]) result.shipTo.code = el[4];
+          } else if (el[1] === 'BY') {
+            result.buyerName = el[2] || '';
+          }
+          break;
+
+        case 'N3':
+          if (lastN1 === 'ST') result.shipTo.addr = el[1] || '';
+          break;
+
+        case 'N4':
+          if (lastN1 === 'ST') {
+            result.shipTo.city  = el[1] || '';
+            result.shipTo.state = el[2] || '';
+            result.shipTo.zip   = el[3] || '';
+          }
+          break;
+
+        case 'PO1': {
+          if (currentItem) result.items.push(currentItem);
+          lastN1 = null; // exit any open N1 loop
+
+          currentItem = {
+            qty:   el[2] || '1',
+            uom:   el[3] || 'EA',
+            price: el[4] || '',
+            upc:   '',
+            desc:  ''
+          };
+
+          // Product ID qualifier/value pairs start at index 6 (PO106/PO107 …)
+          for (let i = 6; i < el.length - 1; i += 2) {
+            if (el[i] === 'UP' || el[i] === 'UI') {
+              currentItem.upc = el[i + 1] || '';
+              break;
+            }
+          }
+          break;
+        }
+
+        case 'PID':
+          // PID01=type(F), PID02-04=qualifiers, PID05=description text
+          if (currentItem) currentItem.desc = el[5] || '';
+          break;
+
+        case 'CTT':
+          // Transaction totals — flush last item before this
+          if (currentItem) { result.items.push(currentItem); currentItem = null; }
+          break;
+      }
+    }
+
+    // Flush any item not yet pushed (file missing CTT/SE)
+    if (currentItem) result.items.push(currentItem);
+
+    // Return null if we never found a PO number (not a valid 850)
+    return result.poNumber ? result : null;
+  }
+
+  // Fill a line-items tbody from parsed items (no focus/scroll side effects)
+  function clearAndFillLineItems(tbodyId, totalId, items) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+
+    items.forEach((item, i) => {
+      lineCounter++;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="line-num">${i + 1}</td>
+        <td class="col-upc"><input type="text" class="upc" placeholder="012345678901"></td>
+        <td class="col-desc"><input type="text" class="desc" placeholder="Product description"></td>
+        <td class="col-qty"><input type="number" class="qty" value="1" min="1" step="1"
+            oninput="updateTotal('${tbodyId}','${totalId}')"></td>
+        <td class="col-price"><input type="number" class="price" placeholder="0.00" min="0" step="0.01"
+            oninput="updateTotal('${tbodyId}','${totalId}')"></td>
+        <td class="col-remove"><button class="btn-remove"
+            onclick="removeLineItem(this,'${tbodyId}','${totalId}')" title="Remove">&times;</button></td>
+      `;
+      tbody.appendChild(tr);
+      tr.querySelector('.upc').value   = item.upc   || '';
+      tr.querySelector('.desc').value  = item.desc  || '';
+      tr.querySelector('.qty').value   = item.qty   || '1';
+      tr.querySelector('.price').value = item.price || '';
+    });
+
+    updateTotal(tbodyId, totalId);
+  }
+
+  // Replace carton container with one carton pre-filled with all parsed items
+  function clearAndFillCartons(containerId, items) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    // addCarton creates a block with one blank item row; we'll replace it
+    addCarton(containerId);
+    const block = container.querySelector('.carton-block');
+    const tbody = block.querySelector('.carton-items-body');
+    tbody.innerHTML = '';
+
+    items.forEach((item, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="line-num">${i + 1}</td>
+        <td><input type="text" class="item-upc" placeholder="012345678901"></td>
+        <td><input type="number" class="item-qty" value="1" min="1" step="1"></td>
+        <td class="col-remove"><button class="btn-remove" onclick="removeCartonItem(this)">&times;</button></td>
+      `;
+      tbody.appendChild(tr);
+      tr.querySelector('.item-upc').value = item.upc || '';
+      tr.querySelector('.item-qty').value = item.qty || '1';
+    });
+  }
+
+  // Apply parsed 850 data to the appropriate retailer's forms
+  function autofill850(parsed, retailer) {
+    const today = new Date().toISOString().slice(0, 10);
+    const shipIn  = ediDateToInput(parsed.shipDate);
+    const delivIn = ediDateToInput(parsed.deliveryDate);
+
+    if (retailer === 'amazon') {
+      // ── 810 fields ──
+      if (parsed.poNumber) document.getElementById('poNumber').value      = parsed.poNumber;
+      document.getElementById('invoiceDate').value = today;
+      if (shipIn) document.getElementById('shipDate').value = shipIn;
+
+      // ── 856 fields ──
+      if (parsed.poNumber) document.getElementById('asnPoNumber').value   = parsed.poNumber;
+      if (shipIn)          document.getElementById('asnShipDate').value   = shipIn;
+      if (delivIn)         document.getElementById('asnDelivDate').value  = delivIn;
+      if (parsed.shipTo.code)  document.getElementById('asnStDcCode').value = parsed.shipTo.code;
+      if (parsed.shipTo.addr)  document.getElementById('asnStAddr').value   = parsed.shipTo.addr;
+      if (parsed.shipTo.city)  document.getElementById('asnStCity').value   = parsed.shipTo.city;
+      if (parsed.shipTo.state) document.getElementById('asnStState').value  = parsed.shipTo.state;
+      if (parsed.shipTo.zip)   document.getElementById('asnStZip').value    = parsed.shipTo.zip;
+
+      // ── Line items ──
+      if (parsed.items.length) {
+        clearAndFillLineItems('lineItemsBody', 'totalDisplay', parsed.items);
+        clearAndFillCartons('cartonsContainer', parsed.items);
+      }
+
+    } else if (retailer === 'costco') {
+      if (parsed.poNumber)  document.getElementById('coPoNum').value       = parsed.poNumber;
+      document.getElementById('coInvoiceDate').value = today;
+      if (shipIn)           document.getElementById('coShipDate').value    = shipIn;
+      if (parsed.deptNum)   document.getElementById('coBuyerNum').value    = parsed.deptNum;
+      if (parsed.vendorNum) document.getElementById('coVendorNum').value   = parsed.vendorNum;
+
+      if (parsed.poNumber)      document.getElementById('coAsnPoNumber').value   = parsed.poNumber;
+      if (shipIn)               document.getElementById('coAsnShipDate').value   = shipIn;
+      if (delivIn)              document.getElementById('coAsnDelivDate').value  = delivIn;
+      if (parsed.shipTo.name)   document.getElementById('coAsnStName').value     = parsed.shipTo.name;
+      if (parsed.shipTo.code)   document.getElementById('coAsnStDcCode').value   = parsed.shipTo.code;
+      if (parsed.shipTo.addr)   document.getElementById('coAsnStAddr').value     = parsed.shipTo.addr;
+      if (parsed.shipTo.city)   document.getElementById('coAsnStCity').value     = parsed.shipTo.city;
+      if (parsed.shipTo.state)  document.getElementById('coAsnStState').value    = parsed.shipTo.state;
+      if (parsed.shipTo.zip)    document.getElementById('coAsnStZip').value      = parsed.shipTo.zip;
+
+      if (parsed.items.length) {
+        clearAndFillLineItems('coLineItemsBody', 'coTotalDisplay', parsed.items);
+        clearAndFillCartonsCostco('coCartonsContainer', parsed.items);
+      }
+
+    } else { // walmart
+      // ── 810 fields ──
+      if (parsed.poNumber) document.getElementById('wmPoNum').value       = parsed.poNumber;
+      document.getElementById('wmInvoiceDate').value = today;
+      if (shipIn)          document.getElementById('wmShipDate').value    = shipIn;
+      if (parsed.deptNum)  document.getElementById('wmDeptNum').value     = parsed.deptNum;
+      if (parsed.vendorNum) document.getElementById('wmVendorNum').value  = parsed.vendorNum;
+
+      // ── 856 fields ──
+      if (parsed.poNumber) document.getElementById('wmAsnPoNumber').value  = parsed.poNumber;
+      if (shipIn)          document.getElementById('wmAsnShipDate').value  = shipIn;
+      if (delivIn)         document.getElementById('wmAsnDelivDate').value = delivIn;
+      if (parsed.shipTo.name)  document.getElementById('wmAsnStName').value   = parsed.shipTo.name;
+      if (parsed.shipTo.code)  document.getElementById('wmAsnStDcCode').value = parsed.shipTo.code;
+      if (parsed.shipTo.addr)  document.getElementById('wmAsnStAddr').value   = parsed.shipTo.addr;
+      if (parsed.shipTo.city)  document.getElementById('wmAsnStCity').value   = parsed.shipTo.city;
+      if (parsed.shipTo.state) document.getElementById('wmAsnStState').value  = parsed.shipTo.state;
+      if (parsed.shipTo.zip)   document.getElementById('wmAsnStZip').value    = parsed.shipTo.zip;
+
+      // ── Line items ──
+      if (parsed.items.length) {
+        clearAndFillLineItems('wmLineItemsBody', 'wmTotalDisplay', parsed.items);
+        clearAndFillCartons('wmCartonsContainer', parsed.items);
+      }
+    }
+  }
+
+  function showPoBanner(id, type, message) {
+    const el = document.getElementById(id);
+    el.className = `po-banner ${type} visible`;
+    el.textContent = message;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // PDF.js text extraction + pattern matching
+  // ════════════════════════════════════════════════════════════
+
+  function _parseInvoiceDate(str) {
+    if (!str) return '';
+    str = str.trim();
+    if (/^\d{8}$/.test(str)) return str;
+    let m = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if (m) return m[1] + m[2].padStart(2,'0') + m[3].padStart(2,'0');
+    m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if (m) return m[3] + m[1].padStart(2,'0') + m[2].padStart(2,'0');
+    const months = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',
+                    july:'07',august:'08',september:'09',october:'10',november:'11',december:'12',
+                    jan:'01',feb:'02',mar:'03',apr:'04',jun:'06',jul:'07',aug:'08',
+                    sep:'09',oct:'10',nov:'11',dec:'12'};
+    m = str.match(/^([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/i);
+    if (m) {
+      const mon = months[m[1].toLowerCase()];
+      if (mon) return m[3] + mon + m[2].padStart(2,'0');
+    }
+    return '';
+  }
+
+  function _extractFromPdfText(text) {
+    const result = {
+      invoiceNumber: '', invoiceDate: '', poNumber: '', shipDate: '',
+      vendorName: '', vendorAddress: '', vendorCity: '', vendorState: '', vendorZip: '',
+      lineItems: []
+    };
+
+    const lines = text.split(/\n/).map(l => l.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const flat  = lines.join('\n');
+
+    // Invoice number
+    const invNum = flat.match(/invoice\s*(?:number|no\.?|#)\s*[:\-]?\s*([A-Z0-9\-\/]+)/i);
+    if (invNum) result.invoiceNumber = invNum[1].trim();
+
+    // Invoice date
+    const invDate = flat.match(/invoice\s*date\s*[:\-]?\s*([\w\/\-\.]+(?:\s+\w+,?\s+\d{4}|\d{4}))/i);
+    if (invDate) result.invoiceDate = _parseInvoiceDate(invDate[1].trim());
+
+    // PO number
+    const poNum = flat.match(/(?:purchase\s*order|p\.?o\.?\s*(?:number|no\.?|#)?)\s*[:\-]?\s*([A-Z0-9\-\/]+)/i);
+    if (poNum) result.poNumber = poNum[1].trim();
+
+    // Ship date
+    const shipDate = flat.match(/ship(?:ping|ment)?\s*date\s*[:\-]?\s*([\w\/\-\.]+(?:\s+\w+,?\s+\d{4}|\d{4}))/i);
+    if (shipDate) result.shipDate = _parseInvoiceDate(shipDate[1].trim());
+
+    // Vendor name — first line that looks like a company name
+    for (const line of lines.slice(0, 25)) {
+      if (/\b(inc\.?|llc\.?|ltd\.?|corp\.?|co\.?|company|enterprises?|group|solutions?|supply|trading|manufacturing|distribution)\b/i.test(line)) {
+        result.vendorName = line.trim();
+        break;
+      }
+    }
+    if (!result.vendorName) {
+      for (const line of lines.slice(0, 15)) {
+        if (line.length > 4 && !/^(invoice|bill|statement|receipt|date|page|to:|from:|ship|sold|deliver|remit)/i.test(line)
+            && !/^\d/.test(line)) {
+          result.vendorName = line;
+          break;
+        }
+      }
+    }
+
+    // Vendor address — street + city/state/zip block
+    const addrMatch = flat.match(
+      /(\d+\s+[A-Za-z0-9][A-Za-z0-9\s\.]+?(?:st\.?|street|ave\.?|avenue|blvd\.?|boulevard|dr\.?|drive|rd\.?|road|ln\.?|lane|way|pkwy|parkway|ct\.?|court|pl\.?|place))\s*[\n,]\s*([A-Za-z\s]+?),?\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i
+    );
+    if (addrMatch) {
+      result.vendorAddress = addrMatch[1].trim();
+      result.vendorCity    = addrMatch[2].trim().replace(/,$/,'');
+      result.vendorState   = addrMatch[3].trim().toUpperCase();
+      result.vendorZip     = addrMatch[4].trim();
+    }
+
+    // Line items — scan for 12-digit UPCs
+    const upcRe = /\b(\d{12})\b/g;
+    let upcMatch;
+    const seen = new Set();
+    while ((upcMatch = upcRe.exec(flat)) !== null) {
+      const upc = upcMatch[1];
+      if (seen.has(upc)) continue;
+      seen.add(upc);
+
+      const ctxStart = Math.max(0, upcMatch.index - 250);
+      const ctxEnd   = Math.min(flat.length, upcMatch.index + 250);
+      const ctx      = flat.slice(ctxStart, ctxEnd);
+
+      // Unit price: prefer last decimal number in context (often the rightmost column)
+      let price = 0;
+      const prices = [...ctx.matchAll(/\$?\s*(\d{1,6}\.\d{2})\b/g)];
+      if (prices.length) price = parseFloat(prices[prices.length - 1][1]) || 0;
+
+      // Quantity: small integer not part of UPC, near common qty labels
+      let qty = 1;
+      const qtyM = ctx.match(/\b(?:qty|quantity|units?|ea\.?|each|pcs?)\s*[:\-]?\s*([1-9]\d{0,3})\b/i)
+                || ctx.match(/\b([1-9]\d{0,3})\s*(?:ea\.?|each|pcs?|units?)\b/i)
+                || ctx.match(/(?<!\d)([1-9]\d{0,2})(?!\d)/);
+      if (qtyM) qty = parseInt(qtyM[1]) || 1;
+
+      // Description: longest run of letters/spaces in context, not a label keyword
+      let desc = '';
+      const descM = ctx.match(/([A-Z][A-Za-z0-9 ,\-\.\/\']{8,70})/g);
+      if (descM) {
+        const candidates = descM.filter(d =>
+          !/^(invoice|purchase|order|ship|date|number|total|amount|price|quantity|description|item|vendor|remit|bill|sold|page)/i.test(d.trim())
+        );
+        if (candidates.length) desc = candidates[0].trim();
+      }
+
+      result.lineItems.push({ upc, description: desc, quantity: qty, unitPrice: price });
+    }
+
+    return result;
+  }
+
+  function _autofillFromPdf(data, retailer) {
+    const inv8     = (data.invoiceDate || '').replace(/\D/g, '');
+    const ship8    = (data.shipDate    || '').replace(/\D/g, '');
+    const invDateIn  = ediDateToInput(inv8);
+    const shipDateIn = ediDateToInput(ship8);
+
+    const items = (data.lineItems || []).map(it => ({
+      upc:   String(it.upc  || ''),
+      desc:  it.description || '',
+      qty:   it.quantity    || 1,
+      price: it.unitPrice   || 0
+    }));
+
+    if (retailer === 'amazon') {
+      if (data.invoiceNumber) document.getElementById('invoiceNum').value   = data.invoiceNumber;
+      if (invDateIn)          document.getElementById('invoiceDate').value  = invDateIn;
+      if (data.poNumber)      document.getElementById('poNumber').value     = data.poNumber;
+      if (shipDateIn)         document.getElementById('shipDate').value     = shipDateIn;
+      if (data.vendorName)    document.getElementById('senderName').value   = data.vendorName;
+      if (shipDateIn)         document.getElementById('asnShipDate').value  = shipDateIn;
+      if (data.poNumber)      document.getElementById('asnPoNumber').value  = data.poNumber;
+      if (items.length) {
+        clearAndFillLineItems('lineItemsBody', 'totalDisplay', items);
+        clearAndFillCartons('cartonsContainer', items);
+      }
+    } else if (retailer === 'walmart') {
+      if (data.invoiceNumber) document.getElementById('wmInvoiceNum').value   = data.invoiceNumber;
+      if (invDateIn)          document.getElementById('wmInvoiceDate').value  = invDateIn;
+      if (data.poNumber)      document.getElementById('wmPoNum').value        = data.poNumber;
+      if (shipDateIn)         document.getElementById('wmShipDate').value     = shipDateIn;
+      if (data.vendorName)    document.getElementById('wmSenderName').value   = data.vendorName;
+      if (data.vendorAddress) document.getElementById('wmVendorStreet').value = data.vendorAddress;
+      if (data.vendorCity)    document.getElementById('wmVendorCity').value   = data.vendorCity;
+      if (data.vendorState)   document.getElementById('wmVendorState').value  = data.vendorState;
+      if (data.vendorZip)     document.getElementById('wmVendorZip').value    = data.vendorZip;
+      if (shipDateIn)         document.getElementById('wmAsnShipDate').value  = shipDateIn;
+      if (data.poNumber)      document.getElementById('wmAsnPoNumber').value  = data.poNumber;
+      if (items.length) {
+        clearAndFillLineItems('wmLineItemsBody', 'wmTotalDisplay', items);
+        clearAndFillCartons('wmCartonsContainer', items);
+      }
+    } else { // costco
+      if (data.invoiceNumber) document.getElementById('coInvoiceNum').value   = data.invoiceNumber;
+      if (invDateIn)          document.getElementById('coInvoiceDate').value  = invDateIn;
+      if (data.poNumber)      document.getElementById('coPoNum').value        = data.poNumber;
+      if (shipDateIn)         document.getElementById('coShipDate').value     = shipDateIn;
+      if (data.vendorName)    document.getElementById('coSenderName').value   = data.vendorName;
+      if (data.vendorAddress) document.getElementById('coVendorStreet').value = data.vendorAddress;
+      if (data.vendorCity)    document.getElementById('coVendorCity').value   = data.vendorCity;
+      if (data.vendorState)   document.getElementById('coVendorState').value  = data.vendorState;
+      if (data.vendorZip)     document.getElementById('coVendorZip').value    = data.vendorZip;
+      if (shipDateIn)         document.getElementById('coAsnShipDate').value  = shipDateIn;
+      if (data.poNumber)      document.getElementById('coAsnPoNumber').value  = data.poNumber;
+      if (items.length) {
+        clearAndFillLineItems('coLineItemsBody', 'coTotalDisplay', items);
+        clearAndFillCartonsCostco('coCartonsContainer', items);
+      }
+    }
+  }
+
+  async function handlePdfUpload(input, retailer) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    const bannerId = retailer === 'amazon' ? 'amazonPoBanner' : retailer === 'walmart' ? 'walmartPoBanner' : 'costcoPoBanner';
+    const bannerEl = document.getElementById(bannerId);
+
+    bannerEl.className = 'po-banner loading visible';
+    bannerEl.innerHTML = '<span class="edi-spinner"></span>&ensp;Reading invoice...';
+
+    let fullText = '';
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuf = await file.arrayBuffer();
+      const pdf      = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+      const pageTexts = [];
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page    = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        pageTexts.push(content.items.map(i => i.str).join(' '));
+      }
+      fullText = pageTexts.join('\n');
+    } catch (_) {
+      showPoBanner(bannerId, 'error', 'Could not read the PDF. Please try again.');
+      return;
+    }
+
+    const extracted = _extractFromPdfText(fullText);
+    _autofillFromPdf(extracted, retailer);
+
+    const n = extracted.lineItems.length;
+    const headersFilled = [
+      extracted.invoiceNumber, extracted.invoiceDate,
+      extracted.poNumber,      extracted.shipDate,
+      extracted.vendorName
+    ].filter(Boolean).length;
+
+    if (headersFilled === 0 && n === 0) {
+      showPoBanner(bannerId, 'error',
+        'Limited data extracted — please review and complete the form manually.');
+    } else {
+      const parts = [];
+      if (extracted.invoiceNumber) parts.push(`invoice #${extracted.invoiceNumber}`);
+      if (extracted.poNumber)      parts.push(`PO ${extracted.poNumber}`);
+      if (n)                       parts.push(`${n} line item${n !== 1 ? 's' : ''}`);
+      showPoBanner(bannerId, 'success',
+        `Invoice extracted — ${parts.join(', ')} found. Review all fields before generating EDI.`);
+    }
+
+    const tabId  = retailer === 'amazon' ? 'tab856' : retailer === 'walmart' ? 'wmTab856' : 'coTab856';
+    const secId  = retailer === 'amazon' ? 'amazonSection' : retailer === 'walmart' ? 'walmartSection' : 'costcoSection';
+    const tabBtn = document.querySelector(`#${secId} .tab-btn[onclick*="${tabId}"]`);
+    if (tabBtn) switchTab(tabBtn, tabId);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // 856 Ship Notice PDF extraction
+  // ════════════════════════════════════════════════════════════
+
+  function _parseAddressBlock(text) {
+    const addr = { name: '', addr: '', city: '', state: '', zip: '' };
+    const cszM = text.match(/([A-Za-z][A-Za-z\s]+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/);
+    if (!cszM) return addr;
+    addr.city  = cszM[1].trim();
+    addr.state = cszM[2].toUpperCase();
+    addr.zip   = cszM[3];
+    const before = text.slice(0, cszM.index).trim();
+    const streetM = before.match(/(\d+\s+[A-Za-z].*?)(?:\n|$)/m);
+    if (streetM) {
+      addr.addr = streetM[1].trim();
+      addr.name = before.slice(0, streetM.index).trim().split('\n')[0] || '';
+    } else {
+      const bLines = before.split('\n').map(l => l.trim()).filter(Boolean);
+      if (bLines[0]) addr.name = bLines[0];
+      if (bLines[1]) addr.addr = bLines[1];
+    }
+    return addr;
+  }
+
+  function _extractFrom856PdfText(text) {
+    const lines = text.split(/\n/).map(l => l.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const flat  = lines.join('\n');
+
+    const result = {
+      shipmentId: '', shipDate: '', delivDate: '', poNumber: '',
+      bol: '', scac: '', tracking: '',
+      shipFrom: { name: '', addr: '', city: '', state: '', zip: '' },
+      shipTo:   { name: '', addr: '', city: '', state: '', zip: '' },
+      cartons: []
+    };
+
+    function grab(labelRe) {
+      const m = flat.match(new RegExp(String(labelRe) + '\\s*[:\\-]?\\s*([^\\n]+)', 'i'));
+      return m ? m[1].trim() : '';
+    }
+
+    result.shipmentId = grab('shipment\\s*id');
+    result.poNumber   = grab('p\\.?o\\.?\\s*(?:number|no\\.?|#)');
+    result.bol        = grab('bill\\s*of\\s*lading\\s*(?:no\\.?|#)?');
+    result.scac       = grab('scac\\s*(?:code)?');
+    result.tracking   = grab('tracking\\s*(?:no\\.?|number|#)?');
+
+    const shipDateRaw = grab('ship\\s*date');
+    if (shipDateRaw) result.shipDate = _parseInvoiceDate(shipDateRaw);
+
+    const delivRaw = grab('expected\\s*delivery(?:\\s*date)?');
+    if (delivRaw) result.delivDate = _parseInvoiceDate(delivRaw);
+
+    // Address blocks — look for SHIP FROM / SHIP TO labeled sections
+    const sfM = flat.match(/SHIP\s+FROM\s*[\n:]([\s\S]*?)(?=SHIP\s+TO|CARTON\s+\d|$)/i);
+    if (sfM) result.shipFrom = _parseAddressBlock(sfM[1]);
+
+    const stM = flat.match(/SHIP\s+TO\s*[\n:]([\s\S]*?)(?=CARTON\s+\d|PO\s+NUMBER|$)/i);
+    if (stM) result.shipTo = _parseAddressBlock(stM[1]);
+
+    // Cartons — split on "CARTON X OF Y" headers
+    const cartonChunks = flat.split(/(?=CARTON\s+\d+\s+OF\s+\d+)/i);
+    for (const chunk of cartonChunks) {
+      const hdrM = chunk.match(/CARTON\s+\d+\s+OF\s+\d+\s*[·•\-]?\s*Carton\s*No\.?\s*[:\-]?\s*([A-Z0-9\-]+)/i);
+      if (!hdrM) continue;
+
+      const carton = { number: hdrM[1].trim(), weight: '', length: '', width: '', height: '', items: [] };
+
+      const wtM = chunk.match(/weight\s*[:\-]?\s*([\d\.]+)/i);
+      if (wtM) carton.weight = wtM[1];
+
+      const dimM = chunk.match(/dimensions?\s*[:\-]?\s*([\d\.]+)\s*[x×]\s*([\d\.]+)\s*[x×]\s*([\d\.]+)/i);
+      if (dimM) { carton.length = dimM[1]; carton.width = dimM[2]; carton.height = dimM[3]; }
+
+      // Items: lines containing a 12-digit UPC
+      const itemRe = /\b(\d{12})\b([^\n]*)/g;
+      let iM;
+      while ((iM = itemRe.exec(chunk)) !== null) {
+        const upc  = iM[1];
+        const rest = iM[2].trim();
+        const nums = rest.match(/\d+/g);
+        const qty  = nums ? parseInt(nums[nums.length - 1]) || 1 : 1;
+        const desc = rest.replace(/\d+/g,'').replace(/\s+/g,' ').trim();
+        carton.items.push({ upc, description: desc, quantity: qty });
+      }
+
+      result.cartons.push(carton);
+    }
+
+    return result;
+  }
+
+  function _autofill856FromPdf(data, retailer) {
+    const am = retailer === 'amazon';
+    const co = retailer === 'costco';
+    const pfx = co ? 'co' : (am ? '' : 'wm');
+    const ids = {
+      sid:     am ? 'asnShipmentId'   : `${pfx}AsnShipmentId`,
+      sd:      am ? 'asnShipDate'     : `${pfx}AsnShipDate`,
+      dd:      am ? 'asnDelivDate'    : `${pfx}AsnDelivDate`,
+      scac:    am ? 'asnScac'         : `${pfx}AsnScac`,
+      trk:     am ? 'asnTracking'     : `${pfx}AsnTracking`,
+      bol:     am ? 'asnBol'          : `${pfx}AsnBol`,
+      po:      am ? 'asnPoNumber'     : `${pfx}AsnPoNumber`,
+      sfName:  am ? 'asnSfName'       : `${pfx}AsnSfName`,
+      sfAddr:  am ? 'asnSfAddr'       : `${pfx}AsnSfAddr`,
+      sfCity:  am ? 'asnSfCity'       : `${pfx}AsnSfCity`,
+      sfState: am ? 'asnSfState'      : `${pfx}AsnSfState`,
+      sfZip:   am ? 'asnSfZip'        : `${pfx}AsnSfZip`,
+      stAddr:  am ? 'asnStAddr'       : `${pfx}AsnStAddr`,
+      stCity:  am ? 'asnStCity'       : `${pfx}AsnStCity`,
+      stState: am ? 'asnStState'      : `${pfx}AsnStState`,
+      stZip:   am ? 'asnStZip'        : `${pfx}AsnStZip`,
+      containerId: am ? 'cartonsContainer' : `${pfx}CartonsContainer`
+    };
+
+    const set = (id, val) => { if (val) document.getElementById(id).value = val; };
+
+    set(ids.sid,     data.shipmentId);
+    set(ids.scac,    data.scac ? data.scac.toUpperCase() : '');
+    set(ids.trk,     data.tracking);
+    set(ids.bol,     data.bol);
+    set(ids.po,      data.poNumber);
+    if (data.shipDate)  set(ids.sd, ediDateToInput(data.shipDate));
+    if (data.delivDate) set(ids.dd, ediDateToInput(data.delivDate));
+
+    set(ids.sfName,  data.shipFrom.name);
+    set(ids.sfAddr,  data.shipFrom.addr);
+    set(ids.sfCity,  data.shipFrom.city);
+    set(ids.sfState, data.shipFrom.state);
+    set(ids.sfZip,   data.shipFrom.zip);
+
+    set(ids.stAddr,  data.shipTo.addr);
+    set(ids.stCity,  data.shipTo.city);
+    set(ids.stState, data.shipTo.state);
+    set(ids.stZip,   data.shipTo.zip);
+    if (am) {
+      set('asnStDcCode', data.shipTo.name);
+    } else if (retailer === 'walmart') {
+      set('wmAsnStName', data.shipTo.name);
+      const dcM = (data.shipTo.name || '').match(/\b(\d{4,6})\b/);
+      if (dcM) set('wmAsnStDcCode', dcM[1]);
+    } else { // costco
+      set('coAsnStName', data.shipTo.name);
+      const dcM = (data.shipTo.name || '').match(/\b(\d{4,6})\b/);
+      if (dcM) set('coAsnStDcCode', dcM[1]);
+    }
+
+    if (!data.cartons.length) return;
+
+    const isCostco = retailer === 'costco';
+    const container = document.getElementById(ids.containerId);
+    container.innerHTML = '';
+
+    for (const cd of data.cartons) {
+      if (isCostco) addCartonCostco(ids.containerId);
+      else addCarton(ids.containerId);
+      const blocks = container.querySelectorAll('.carton-block');
+      const block  = blocks[blocks.length - 1];
+
+      block.querySelector('.carton-num').value    = cd.number;
+      if (cd.weight) block.querySelector('.carton-weight').value = cd.weight;
+      if (cd.length) block.querySelector('.carton-length').value = cd.length;
+      if (cd.width)  block.querySelector('.carton-width').value  = cd.width;
+      if (cd.height) block.querySelector('.carton-height').value = cd.height;
+
+      const tbody = block.querySelector('.carton-items-body');
+      tbody.innerHTML = '';
+
+      if (cd.items.length) {
+        cd.items.forEach((item, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="line-num">${i + 1}</td>
+            <td><input type="text" class="item-upc" placeholder="012345678901"></td>
+            <td><input type="number" class="item-qty" value="1" min="1" step="1"></td>
+            <td class="col-remove"><button class="btn-remove" onclick="removeCartonItem(this)">&times;</button></td>`;
+          tbody.appendChild(tr);
+          tr.querySelector('.item-upc').value = item.upc || '';
+          tr.querySelector('.item-qty').value = item.quantity || '1';
+        });
+      } else {
+        addItemToCarton(block.querySelector('.carton-items-section button'));
+      }
+    }
+  }
+
+  async function handleShipNoticePdfUpload(input, retailer) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+
+    const bannerId = retailer === 'amazon' ? 'asnPdfBanner' : retailer === 'walmart' ? 'wmAsnPdfBanner' : 'coAsnPdfBanner';
+    const bannerEl = document.getElementById(bannerId);
+
+    bannerEl.className = 'po-banner loading visible';
+    bannerEl.innerHTML = '<span class="edi-spinner"></span>&ensp;Reading ship notice...';
+
+    let fullText = '';
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuf = await file.arrayBuffer();
+      const pdf      = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+      const pageTexts = [];
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page    = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        pageTexts.push(content.items.map(i => i.str).join(' '));
+      }
+      fullText = pageTexts.join('\n');
+    } catch (_) {
+      showPoBanner(bannerId, 'error', 'Could not read the PDF. Please try again.');
+      return;
+    }
+
+    const extracted = _extractFrom856PdfText(fullText);
+    _autofill856FromPdf(extracted, retailer);
+
+    const totalCartons = extracted.cartons.length;
+    const totalItems   = extracted.cartons.reduce((s, c) => s + c.items.length, 0);
+
+    if (totalCartons === 0 && !extracted.shipmentId && !extracted.poNumber) {
+      showPoBanner(bannerId, 'error',
+        'Limited data extracted — please review and complete the form manually.');
+    } else {
+      showPoBanner(bannerId, 'success',
+        `Ship notice loaded — ${totalCartons} carton${totalCartons !== 1 ? 's' : ''}, ` +
+        `${totalItems} item${totalItems !== 1 ? 's' : ''} found. Review before generating.`);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Costco carton functions (SSCC-18 per carton)
+  // ════════════════════════════════════════════════════════════
+
+  function addCartonCostco(containerId) {
+    cartonCounter++;
+    const container = document.getElementById(containerId);
+    const num = container.querySelectorAll('.carton-block').length + 1;
+    const div = document.createElement('div');
+    div.className = 'carton-block';
+    div.innerHTML = `
+      <div class="carton-header">
+        <span class="carton-label">Carton ${num}</span>
+        <button class="btn-remove" onclick="removeCarton(this)" title="Remove carton">&times;</button>
+      </div>
+      <div class="carton-fields">
+        <div class="field"><label>Carton / Reference #</label><input type="text" class="carton-num" placeholder="CTN-001"></div>
+        <div class="field"><label>SSCC-18 Barcode</label><input type="text" class="carton-sscc18" placeholder="000000000000000000" maxlength="18"><span class="hint">18-digit code from your carton label</span></div>
+        <div class="field"><label>Weight (lbs)</label><input type="number" class="carton-weight" placeholder="0.0" min="0" step="0.1"></div>
+        <div class="field"><label>Length (in)</label><input type="number" class="carton-length" placeholder="0" min="0" step="0.1"></div>
+        <div class="field"><label>Width (in)</label><input type="number" class="carton-width" placeholder="0" min="0" step="0.1"></div>
+        <div class="field"><label>Height (in)</label><input type="number" class="carton-height" placeholder="0" min="0" step="0.1"></div>
+      </div>
+      <div class="carton-items-section">
+        <div class="sub-heading">Items in this carton</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>UPC</th><th style="width:90px;">Quantity</th><th style="width:40px;"></th></tr></thead>
+            <tbody class="carton-items-body"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:0.6rem;font-size:0.78rem;padding:0.3rem 0.75rem;"
+                onclick="addItemToCarton(this)">+ Add Item</button>
+      </div>
+    `;
+    container.appendChild(div);
+    addItemToCarton(div.querySelector('.carton-items-section button'));
+  }
+
+  function buildCartonHLCostco(seg, hlSeqRef, containerId, hlOrderNum) {
+    document.querySelectorAll(`#${containerId} .carton-block`).forEach(block => {
+      const sscc18    = block.querySelector('.carton-sscc18').value.trim();
+      const weight    = parseFloat(block.querySelector('.carton-weight').value) || 0;
+      const len       = block.querySelector('.carton-length').value;
+      const wid       = block.querySelector('.carton-width').value;
+      const hgt       = block.querySelector('.carton-height').value;
+      const itemRows  = block.querySelectorAll('.carton-items-body tr');
+
+      const hlPack = ++hlSeqRef.v;
+      seg.push(`HL*${hlPack}*${hlOrderNum}*P*${itemRows.length > 0 ? 1 : 0}`);
+      seg.push(`MAN*GM*${sscc18}`);
+      seg.push(`TD1*CTN*1***G*${weight.toFixed(1)}*LB`);
+      if (len && wid && hgt) {
+        seg.push(`MEA*PD*LN*${len}*IN`);
+        seg.push(`MEA*PD*WD*${wid}*IN`);
+        seg.push(`MEA*PD*HT*${hgt}*IN`);
+      }
+      itemRows.forEach(row => {
+        const upc  = row.querySelector('.item-upc').value.trim();
+        const qty  = row.querySelector('.item-qty').value || '1';
+        const hlItem = ++hlSeqRef.v;
+        seg.push(`HL*${hlItem}*${hlPack}*I*0`);
+        seg.push(`LIN**UP*${upc}`);
+        seg.push(`SN1**${qty}*EA`);
+      });
+    });
+  }
+
+  function clearAndFillCartonsCostco(containerId, items) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    addCartonCostco(containerId);
+    const block = container.querySelector('.carton-block');
+    const tbody = block.querySelector('.carton-items-body');
+    tbody.innerHTML = '';
+    items.forEach((item, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="line-num">${i + 1}</td>
+        <td><input type="text" class="item-upc" placeholder="012345678901"></td>
+        <td><input type="number" class="item-qty" value="1" min="1" step="1"></td>
+        <td class="col-remove"><button class="btn-remove" onclick="removeCartonItem(this)">&times;</button></td>`;
+      tbody.appendChild(tr);
+      tr.querySelector('.item-upc').value = item.upc || '';
+      tr.querySelector('.item-qty').value = item.qty || '1';
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Costco 810
+  // ════════════════════════════════════════════════════════════
+
+  function build810Costco() {
+    const now        = new Date();
+    const vendorNum  = document.getElementById('coVendorNum').value.trim();
+    const senderName = document.getElementById('coSenderName').value.trim();
+    const env        = document.getElementById('coEnv').value;
+
+    const invoiceNum     = document.getElementById('coInvoiceNum').value.trim();
+    const invoiceDateVal = document.getElementById('coInvoiceDate').value;
+    const poNumber       = document.getElementById('coPoNum').value.trim();
+    const shipDateVal    = document.getElementById('coShipDate').value;
+    const buyerNum       = document.getElementById('coBuyerNum').value.trim();
+
+    const vendorStreet = document.getElementById('coVendorStreet').value.trim();
+    const vendorCity   = document.getElementById('coVendorCity').value.trim();
+    const vendorState  = document.getElementById('coVendorState').value.trim();
+    const vendorZip    = document.getElementById('coVendorZip').value.trim();
+
+    const buyerStreet = document.getElementById('coBuyerStreet').value.trim();
+    const buyerCity   = document.getElementById('coBuyerCity').value.trim();
+    const buyerState  = document.getElementById('coBuyerState').value.trim();
+    const buyerZip    = document.getElementById('coBuyerZip').value.trim();
+
+    const stDcName = document.getElementById('coStDcName').value.trim();
+    const stDcCode = document.getElementById('coStDcCode').value.trim();
+    const stAddr   = document.getElementById('coStAddr').value.trim();
+    const stCity   = document.getElementById('coStCity').value.trim();
+    const stState  = document.getElementById('coStState').value.trim();
+    const stZip    = document.getElementById('coStZip').value.trim();
+
+    if (!vendorNum)      return ediErr('Costco Vendor Number is required (Costco EDI Config).');
+    if (!senderName)     return ediErr('Company Name is required (Costco EDI Config).');
+    if (!invoiceNum)     return ediErr('Invoice Number is required.');
+    if (!invoiceDateVal) return ediErr('Invoice Date is required.');
+    if (!poNumber)       return ediErr('PO Number is required.');
+    if (!shipDateVal)    return ediErr('Ship Date is required.');
+
+    const rows = document.querySelectorAll('#coLineItemsBody tr');
+    if (!rows.length) return ediErr('Add at least one line item.');
+
+    const items = [];
+    for (const tr of rows) {
+      const upc   = tr.querySelector('.upc').value.trim();
+      const desc  = tr.querySelector('.desc').value.trim();
+      const qty   = parseFloat(tr.querySelector('.qty').value);
+      const price = parseFloat(tr.querySelector('.price').value);
+      if (!upc)                      return ediErr('UPC is required for every line item.');
+      if (isNaN(qty) || qty <= 0)    return ediErr('Quantity must be positive for every line item.');
+      if (isNaN(price) || price < 0) return ediErr('Unit Price must be valid for every line item.');
+      items.push({ upc, desc, qty, price });
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(vendorNum, '012603196', '01', 'IN', env, now);
+    const invoiceDate = toDate8(invoiceDateVal);
+    const shipDate    = toDate8(shipDateVal);
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*810*0001`);
+    seg.push(`BIG*${invoiceDate}*${invoiceNum}**${poNumber}`);
+    seg.push(`REF*IA*${vendorNum}`);
+    if (buyerNum) seg.push(`REF*DP*${buyerNum}`);
+    seg.push(`DTM*011*${invoiceDate}`);
+
+    seg.push(`N1*BY*COSTCO WHOLESALE CORP*UL*0075508100000`);
+    if (buyerStreet) seg.push(`N3*${buyerStreet}`);
+    if (buyerCity || buyerState || buyerZip) seg.push(`N4*${buyerCity}*${buyerState}*${buyerZip}`);
+
+    seg.push(`N1*SE*${senderName}*92*${vendorNum}`);
+    if (vendorStreet) seg.push(`N3*${vendorStreet}`);
+    if (vendorCity || vendorState || vendorZip) seg.push(`N4*${vendorCity}*${vendorState}*${vendorZip}`);
+
+    if (stDcName || stDcCode) {
+      seg.push(`N1*ST*${stDcName}*92*${stDcCode}`);
+      if (stAddr) seg.push(`N3*${stAddr}`);
+      if (stCity || stState || stZip) seg.push(`N4*${stCity}*${stState}*${stZip}`);
+    }
+
+    let totalCents = 0;
+    items.forEach((item, i) => {
+      totalCents += Math.round(item.qty * item.price * 100);
+      seg.push(`IT1*${i + 1}*${item.qty}*EA*${item.price.toFixed(2)}**UP*${item.upc}`);
+      if (item.desc) seg.push(`PID*F****${item.desc}`);
+    });
+
+    const totalQty = items.reduce((s, it) => s + it.qty, 0);
+    seg.push(`CTT*${items.length}*${totalQty}`);
+    seg.push(`TDS*${totalCents}`);
+    seg.push(`TXI*TX*0*0`);
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // Costco 856
+  // ════════════════════════════════════════════════════════════
+
+  function build856Costco() {
+    const now       = new Date();
+    const vendorNum = document.getElementById('coVendorNum').value.trim();
+    const senderName= document.getElementById('coSenderName').value.trim();
+    const env       = document.getElementById('coEnv').value;
+
+    const shipmentId  = document.getElementById('coAsnShipmentId').value.trim();
+    const shipDateVal = document.getElementById('coAsnShipDate').value;
+    const delivDateVal= document.getElementById('coAsnDelivDate').value;
+    const scac        = document.getElementById('coAsnScac').value.trim().toUpperCase();
+    const tracking    = document.getElementById('coAsnTracking').value.trim();
+    const bol         = document.getElementById('coAsnBol').value.trim();
+
+    const sfName  = document.getElementById('coAsnSfName').value.trim();
+    const sfAddr  = document.getElementById('coAsnSfAddr').value.trim();
+    const sfCity  = document.getElementById('coAsnSfCity').value.trim();
+    const sfState = document.getElementById('coAsnSfState').value.trim();
+    const sfZip   = document.getElementById('coAsnSfZip').value.trim();
+
+    const stName  = document.getElementById('coAsnStName').value.trim();
+    const stDc    = document.getElementById('coAsnStDcCode').value.trim();
+    const stAddr  = document.getElementById('coAsnStAddr').value.trim();
+    const stCity  = document.getElementById('coAsnStCity').value.trim();
+    const stState = document.getElementById('coAsnStState').value.trim();
+    const stZip   = document.getElementById('coAsnStZip').value.trim();
+
+    const poNumber = document.getElementById('coAsnPoNumber').value.trim();
+
+    if (!vendorNum)   return ediErr('Costco Vendor Number is required (Costco EDI Config).');
+    if (!shipmentId)  return ediErr('Shipment ID is required.');
+    if (!shipDateVal) return ediErr('Ship Date is required.');
+    if (!scac)        return ediErr('Carrier SCAC is required.');
+    if (!sfName)      return ediErr('Ship From company name is required.');
+    if (!stDc)        return ediErr('Costco DC Code is required.');
+    if (!poNumber)    return ediErr('PO Number is required.');
+
+    const cartons = document.querySelectorAll('#coCartonsContainer .carton-block');
+    if (!cartons.length) return ediErr('Add at least one carton.');
+    for (const b of cartons) {
+      if (!b.querySelector('.carton-sscc18').value.trim()) return ediErr('Every carton needs an SSCC-18 barcode.');
+      const items = b.querySelectorAll('.carton-items-body tr');
+      if (!items.length) return ediErr('Every carton needs at least one item.');
+      for (const r of items) if (!r.querySelector('.item-upc').value.trim()) return ediErr('Every item needs a UPC.');
+    }
+
+    const { isa, gs, iTime, ctrlNum } = makeEnvelope(vendorNum, '012603196', '01', 'SH', env, now);
+    const shipDate  = toDate8(shipDateVal);
+    const delivDate = delivDateVal ? toDate8(delivDateVal) : '';
+
+    const seg = [];
+    seg.push(isa);
+    seg.push(gs);
+    seg.push(`ST*856*0001`);
+    seg.push(`BSN*00*${shipmentId}*${shipDate}*${iTime}*0001`);
+    seg.push(`DTM*011*${shipDate}`);
+    if (delivDate) seg.push(`DTM*017*${delivDate}`);
+
+    const hlSeq  = { v: 0 };
+    const hlShip = ++hlSeq.v;
+    seg.push(`HL*${hlShip}**S*1`);
+    seg.push(`TD5*B*2*${scac}**${tracking}`);
+    if (bol) seg.push(`TD3***${bol}`);
+
+    seg.push(`N1*SF*${sfName}*92*${vendorNum}`);
+    if (sfAddr) seg.push(`N3*${sfAddr}`);
+    if (sfCity || sfState || sfZip) seg.push(`N4*${sfCity}*${sfState}*${sfZip}`);
+
+    seg.push(`N1*ST*${stName}*92*${stDc}`);
+    if (stAddr) seg.push(`N3*${stAddr}`);
+    if (stCity || stState || stZip) seg.push(`N4*${stCity}*${stState}*${stZip}`);
+
+    const hlOrder = ++hlSeq.v;
+    seg.push(`HL*${hlOrder}*${hlShip}*O*1`);
+    seg.push(`PRF*${poNumber}`);
+
+    buildCartonHLCostco(seg, hlSeq, 'coCartonsContainer', hlOrder);
+
+    const allItemRows = document.querySelectorAll('#coCartonsContainer .carton-items-body tr');
+    const coCttQty = Array.from(allItemRows).reduce((s, r) => s + (parseFloat(r.querySelector('.item-qty').value) || 0), 0);
+    seg.push(`CTT*${allItemRows.length}*${coCttQty}`);
+
+    pushSE(seg);
+    seg.push(`GE*1*1`);
+    seg.push(`IEA*1*${ctrlNum}`);
+
+    return seg.join('~\n') + '~\n';
+  }
+
+  function handle850Upload(input, retailer) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const bannerId = retailer === 'amazon' ? 'amazonPoBanner' : retailer === 'walmart' ? 'walmartPoBanner' : 'costcoPoBanner';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      let parsed = null;
+
+      try {
+        parsed = parse850(e.target.result);
+      } catch (_) { /* handled below */ }
+
+      if (!parsed) {
+        showPoBanner(bannerId, 'error',
+          "This doesn't appear to be a valid 850 PO file. Please check the file and try again.");
+        input.value = '';
+        return;
+      }
+
+      autofill850(parsed, retailer);
+
+      const n = parsed.items.length;
+      showPoBanner(bannerId, 'success',
+        `PO ${parsed.poNumber} loaded — ${n} line item${n !== 1 ? 's' : ''} found. ` +
+        `Review and complete the remaining fields before generating.`);
+
+      // Switch to 856 tab (sent before invoice)
+      const tabId  = retailer === 'amazon' ? 'tab856' : retailer === 'walmart' ? 'wmTab856' : 'coTab856';
+      const secId  = retailer === 'amazon' ? 'amazonSection' : retailer === 'walmart' ? 'walmartSection' : 'costcoSection';
+      const tabBtn = document.querySelector(`#${secId} .tab-btn[onclick*="${tabId}"]`);
+      if (tabBtn) switchTab(tabBtn, tabId);
+      markStep(retailer, 1);
+
+      input.value = ''; // allow re-uploading the same file
+    };
+
+    reader.readAsText(file);
+  }
+</script>
+
+</body>
+</html>
